@@ -1,0 +1,5 @@
+collections:
+  - name: vultr.cloud
+    version: 1.14.0
+  - name: community.general
+    version: 12.4.0

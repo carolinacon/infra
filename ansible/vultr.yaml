@@ -1,0 +1,5 @@
+plugin: vultr.cloud.vultr
+api_key: '{{ lookup("env", "VULTR_API_KEY") }}'
+compose:
+  ansible_host: vultr_main_ip or vultr_v6_main_ip
+  ansible_user: '"root"'

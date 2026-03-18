@@ -1,0 +1,2 @@
+source ../terraform/.envrc
+([[ -d "../.venv" ]] || uv sync) && source ../.venv/bin/activate

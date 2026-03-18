@@ -1,0 +1,23 @@
+- name: Provisioning lighthouse host
+  hosts: lighthouse
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
+    # https://docs.defined.net/get-started/enrolling-a-lighthouse/
+    - name: Allowing udp 4242 for lighthouse
+      community.general.ufw:
+        rule: allow
+        port: 4242
+        proto: udp
+        comment: lighthouse port

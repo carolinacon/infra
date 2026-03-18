@@ -1,0 +1,27 @@
+- name: Harden SSHD config
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-ansible_hardening.conf
+    owner: root
+    group: root
+    mode: "600"
+    force: true
+    backup: true
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin prohibit-password
+      KbdInteractiveAuthentication no
+  notify: Reload ssh
+
+- name: Install packages
+  ansible.builtin.package:
+    state: present
+    name:
+      - ufw
+
+- name: Limit ssh connections
+  community.general.ufw:
+    rule: limit
+    port: ssh
+    proto: tcp
+    comment: Limit ssh connections to prevent bruteforcing
+    state: enabled
