@@ -9,15 +9,33 @@
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
+  vars:
+    # printf CC | xxd
+    wireguard_port: 4343
 
   tasks:
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
-    # https://docs.defined.net/get-started/enrolling-a-lighthouse/
-    - name: Allowing udp 4242 for lighthouse
+    - name: Allowing udp {{ wireguard_port }} for wireguard
       community.general.ufw:
         rule: allow
-        port: 4242
+        port: "{{ wireguard_port }}"
         proto: udp
-        comment: lighthouse port
+        comment: wireguard port
+
+    - name: Enable IP forwarding
+      ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - net.ipv4.ip_forward
+        - net.ipv6.conf.default.forwarding
+        - net.ipv6.conf.all.forwarding
+
+    - name: Installing wireguard
+      ansible.builtin.include_role:
+        name: githubixx.ansible_role_wireguard
