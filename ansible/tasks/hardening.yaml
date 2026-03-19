@@ -17,6 +17,7 @@
     state: present
     name:
       - ufw
+      - unattended-upgrades
 
 - name: Limit ssh connections
   community.general.ufw:
@@ -25,3 +26,20 @@
     proto: tcp
     comment: Limit ssh connections to prevent bruteforcing
     state: enabled
+
+# https://github.com/trailofbits/algo/blob/3750bac55b637b02d5130d839a2efc49f3a523aa/roles/common/tasks/unattended-upgrades.yml
+- name: Configure unattended-upgrades
+  ansible.builtin.template:
+    src: 50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Periodic upgrades configured
+  ansible.builtin.copy:
+    src: 10periodic
+    dest: /etc/apt/apt.conf.d/10periodic
+    owner: root
+    group: root
+    mode: "0644"
