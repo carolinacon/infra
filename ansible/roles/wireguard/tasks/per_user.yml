@@ -1,0 +1,74 @@
+- name: Generate private key if not present | {{ user.name }}
+  command: wg genkey
+  register: private_key
+  args:
+    creates: "{{ keys_dir }}/{{ user.name }}.key"
+  no_log: true
+
+- name: Save private key | {{ user.name }}
+  copy:
+    content: "{{ private_key.stdout }}"
+    dest: "{{ keys_dir }}/{{ user.name }}.key"
+    owner: root
+    group: root
+    mode: "0600"
+  when: private_key.stdout is defined and "skipped" not in private_key.stdout
+  no_log: true
+
+- name: Generate public key | {{ user.name }}
+  shell: "cat {{ keys_dir }}/{{ user.name }}.key | wg pubkey"
+  register: public_key
+  changed_when: false
+
+- name: Save public key | {{ user.name }}
+  copy:
+    content: "{{ public_key.stdout }}"
+    dest: "{{ keys_dir }}/{{ user.name }}.pub"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Generate preshared key if not present | {{ user.name }}
+  command: wg genpsk
+  register: psk
+  args:
+    creates: "{{ keys_dir }}/{{ user.name }}.psk"
+  no_log: true
+
+- name: Save preshared key | {{ user.name }}
+  copy:
+    content: "{{ psk.stdout }}"
+    dest: "{{ keys_dir }}/{{ user.name }}.psk"
+    owner: root
+    group: root
+    mode: "0600"
+  when: psk.stdout is defined and "skipped" not in psk.stdout
+  no_log: true
+
+- name: Read private key | {{ user.name }}
+  slurp:
+    src: "{{ keys_dir }}/{{ user.name }}.key"
+  register: private_key_file
+  no_log: true
+
+- name: Read preshared key | {{ user.name }}
+  slurp:
+    src: "{{ keys_dir }}/{{ user.name }}.psk"
+  register: psk_file
+  no_log: true
+
+- name: Render WireGuard client config | {{ user.name }}
+  template:
+    src: client.conf.j2
+    dest: "{{ configs_dir }}/{{ user.name }}.conf"
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    wg_private_key: "{{ private_key_file.content | b64decode }}"
+    wg_psk: "{{ psk_file.content | b64decode }}"
+
+- name: Generate QR code | {{ user.name }}
+  command: >
+    qrencode -o {{ configs_dir }}/{{ user.name }}.png
+    < {{ configs_dir }}/{{ user.name }}.conf

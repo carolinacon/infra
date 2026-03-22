@@ -14,28 +14,44 @@
     wireguard_port: 4343
 
   tasks:
-    - name: Hardening servers
-      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+    # - name: Hardening servers
+    #   ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
-    - name: Allowing udp {{ wireguard_port }} for wireguard
-      community.general.ufw:
-        rule: allow
-        port: "{{ wireguard_port }}"
-        proto: udp
-        comment: wireguard port
+    # - name: Allowing udp {{ wireguard_port }} for wireguard
+    #   community.general.ufw:
+    #     rule: allow
+    #     port: "{{ wireguard_port }}"
+    #     proto: udp
+    #     comment: wireguard port
 
-    - name: Enable IP forwarding
-      ansible.posix.sysctl:
-        name: "{{ item }}"
-        value: "1"
-        sysctl_set: true
+    # - name: Enable IP forwarding
+    #   ansible.posix.sysctl:
+    #     name: "{{ item }}"
+    #     value: "1"
+    #     sysctl_set: true
+    #     state: present
+    #     reload: true
+    #   loop:
+    #     - net.ipv4.ip_forward
+    #     - net.ipv6.conf.default.forwarding
+    #     - net.ipv6.conf.all.forwarding
+
+    - name: Install packages needed for wireguard provisioning
+      ansible.builtin.package:
         state: present
-        reload: true
-      loop:
-        - net.ipv4.ip_forward
-        - net.ipv6.conf.default.forwarding
-        - net.ipv6.conf.all.forwarding
+        name:
+          - wireguard
+          - wireguard-tools
+          - qrencode
 
-    - name: Installing wireguard
+    - name: Configuring Wireguard VPN
       ansible.builtin.include_role:
-        name: githubixx.ansible_role_wireguard
+        name: wireguard
+      vars:
+        wg_listen_port: '{{ wireguard_port }}'
+        wg_endpoint: '{{ ansible_facts["default_ipv4"]["address"] }}:{{ wireguard_port }}'
+        wireguard_users:
+          - name: elrey
+            ip_octet: 2
+          - name: trvon
+            ip_octet: 3

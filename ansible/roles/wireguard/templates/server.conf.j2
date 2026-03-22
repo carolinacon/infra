@@ -1,0 +1,14 @@
+[Interface]
+PrivateKey = {{ wg_server_private_key }}
+Address = {{ wg_address }}
+ListenPort = {{ wg_listen_port }}
+
+{% for peer in wg_peers %}
+# {{ peer.name }}
+[Peer]
+PublicKey = {{ peer.public_key }}
+PresharedKey = {{ peer.psk }}
+AllowedIPs = {{ peer.ip }}
+PersistentKeepalive = 25
+
+{% endfor %}

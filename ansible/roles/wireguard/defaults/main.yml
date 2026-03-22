@@ -1,0 +1,23 @@
+wireguard_users: []
+
+keys_dir: /etc/wireguard/keys
+configs_dir: /etc/wireguard/configs
+
+# Toggle auto IP assignment
+wg_auto_ip: false
+# CGNat IP range to not collide with internal networks
+wg_ip_base: 100.70.0
+wg_ip_start: 2
+
+wg_interface: wg0
+wg_listen_port: 51820
+wg_endpoint: 'vpn.example.com:{{ wg_listen_port }}'
+wg_dns: '9.9.9.9, 149.112.112.112'
+wg_server_private_key_path: /etc/wireguard/server.key
+wg_server_public_key_path: /etc/wireguard/server.pub
+
+# Server networking
+wg_address: '{{ wg_ip_base ~ ".1/24" }}'
+
+# Optional: manage service
+wg_manage_service: true

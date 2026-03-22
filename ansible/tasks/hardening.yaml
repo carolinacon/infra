@@ -12,7 +12,7 @@
       KbdInteractiveAuthentication no
   notify: Reload ssh
 
-- name: Install packages
+- name: Install hardening packages
   ansible.builtin.package:
     state: present
     name:

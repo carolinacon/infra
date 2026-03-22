@@ -1,0 +1,132 @@
+---
+# ----------------------------
+# Ensure base directories exist
+# ----------------------------
+
+- name: Ensure key directory exists
+  file:
+    path: "{{ keys_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Ensure config directory exists
+  file:
+    path: "{{ configs_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+# ----------------------------
+# Validate user input
+# ----------------------------
+
+- name: Ensure wireguard_users is defined
+  assert:
+    that:
+      - wireguard_users is defined
+      - wireguard_users | length > 0
+    fail_msg: "wireguard_users must be defined and non-empty"
+
+- name: Validate IP octets are within valid range
+  assert:
+    that:
+      - user.ip_octet is defined
+      - user.ip_octet | int >= 2
+      - user.ip_octet | int <= 254
+    fail_msg: "Invalid ip_octet for {{ user.name }} (must be between 2-254)"
+  loop: "{{ wireguard_users }}"
+  loop_control:
+    loop_var: user
+
+- name: Prevent reserved IP usage (.1 reserved for server)
+  assert:
+    that:
+      - user.ip_octet | int != 1
+    fail_msg: "IP octet .1 is reserved for the WireGuard server"
+  loop: "{{ wireguard_users }}"
+  loop_control:
+    loop_var: user
+
+- name: Check for duplicate IP octets
+  assert:
+    that:
+      - wireguard_users | map(attribute='ip_octet') | list | length ==
+        (wireguard_users | map(attribute='ip_octet') | list | unique | length)
+    fail_msg: "Duplicate ip_octet detected in wireguard_users"
+
+# ----------------------------
+# Derive full IP addresses
+# ----------------------------
+
+- name: Build full WireGuard user list with IPs
+  set_fact:
+    wireguard_users_with_ip: []
+
+- name: Populate WireGuard users with full IPs
+  set_fact:
+    wireguard_users_with_ip: >-
+      {{
+        wireguard_users_with_ip + [
+          user | combine({
+            'ip': wg_ip_base ~ '.' ~ (user.ip_octet | string) ~ '/32'
+          })
+        ]
+      }}
+  loop: "{{ wireguard_users }}"
+  loop_control:
+    loop_var: user
+
+# ----------------------------
+# Server key management
+# ----------------------------
+
+- name: Ensure server private key exists
+  command: wg genkey
+  register: server_private_key
+  args:
+    creates: "{{ wg_server_private_key_path }}"
+  no_log: true
+
+- name: Save server private key
+  copy:
+    content: "{{ server_private_key.stdout }}"
+    dest: "{{ wg_server_private_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: server_private_key.stdout is defined and "skipped" not in server_private_key.stdout
+  no_log: true
+
+- name: Generate server public key
+  shell: "cat {{ wg_server_private_key_path }} | wg pubkey"
+  register: server_public_key
+  changed_when: false
+
+- name: Save public key
+  copy:
+    content: "{{ server_public_key.stdout }}"
+    dest: "{{ wg_server_public_key_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+# ----------------------------
+# Per-user provisioning
+# ----------------------------
+
+- name: Process each WireGuard user
+  include_tasks: per_user.yml
+  loop: "{{ wireguard_users_with_ip }}"
+  loop_control:
+    loop_var: user
+    label: "{{ user.name }}"
+
+# ----------------------------
+# Server config + reconciliation
+# ----------------------------
+
+- name: Build and apply server configuration
+  include_tasks: server.yml

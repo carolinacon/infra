@@ -1,0 +1,56 @@
+- name: Read server private key
+  slurp:
+    src: "{{ wg_server_private_key_path }}"
+  register: server_private_key_file
+  no_log: true
+
+# Collect public and preshared keys first
+- name: Collect client public keys
+  slurp:
+    src: "{{ keys_dir }}/{{ item.name }}.pub"
+  register: client_public_keys
+  loop: "{{ wireguard_users_with_ip }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Collect client preshared keys
+  slurp:
+    src: "{{ keys_dir }}/{{ item.name }}.psk"
+  register: client_psks
+  loop: "{{ wireguard_users_with_ip }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# Extract content lists
+- set_fact:
+    client_public_keys_content: "{{ client_public_keys.results | map(attribute='content') | list }}"
+    client_psks_content: "{{ client_psks.results | map(attribute='content') | list }}"
+
+# Build structured wg_peers using a Jinja list comprehension
+- name: Build structured peer data
+  set_fact:
+    wg_peers: >-
+      {{
+        [
+          {
+            'name': user.name,
+            'ip': user.ip,
+            'public_key': pub | b64decode,
+            'psk': psk | b64decode
+          }
+          for user, pub, psk in zip(wireguard_users_with_ip,
+                                     client_public_keys_content,
+                                     client_psks_content)
+        ]
+      }}
+
+- name: Render server config
+  template:
+    src: server.conf.j2
+    dest: "/etc/wireguard/{{ wg_interface }}.conf"
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    wg_server_private_key: "{{ server_private_key_file.content | b64decode }}"
+  notify: Restart WireGuard

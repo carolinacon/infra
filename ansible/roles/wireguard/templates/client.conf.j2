@@ -1,0 +1,11 @@
+[Interface]
+PrivateKey = {{ wg_private_key }}
+Address = {{ user.ip }}
+DNS = {{ wg_dns }}
+
+[Peer]
+PublicKey = {{ server_public_key.stdout }}
+PresharedKey = {{ wg_psk }}
+Endpoint = {{ wg_endpoint }}
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25

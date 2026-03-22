@@ -1,0 +1,5 @@
+- name: Debug playbook
+  hosts: all
+  tasks:
+    - debug:
+        var: ansible_facts
