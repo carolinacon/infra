@@ -2,6 +2,8 @@
 PrivateKey = {{ wg_server_private_key }}
 Address = {{ wg_address }}
 ListenPort = {{ wg_listen_port }}
+PostUp = iptables -t nat -A POSTROUTING -o $(ip route show default | awk '{print $5}') -j MASQUERADE
+PostDown = iptables -t nat -D POSTROUTING -o $(ip route show default | awk '{print $5}') -j MASQUERADE
 
 {% for peer in wg_peers %}
 # {{ peer.name }}

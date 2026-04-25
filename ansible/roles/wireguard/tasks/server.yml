@@ -26,23 +26,28 @@
     client_public_keys_content: "{{ client_public_keys.results | map(attribute='content') | list }}"
     client_psks_content: "{{ client_psks.results | map(attribute='content') | list }}"
 
-# Build structured wg_peers using a Jinja list comprehension
+# Build structured wg_peers using iterative approach
+- name: Initialize peer data list
+  set_fact:
+    wg_peers: []
+
 - name: Build structured peer data
   set_fact:
     wg_peers: >-
       {{
-        [
+        wg_peers + [
           {
-            'name': user.name,
-            'ip': user.ip,
-            'public_key': pub | b64decode,
-            'psk': psk | b64decode
+            'name': wireguard_users_with_ip[ansible_loop.index0].name,
+            'ip': wireguard_users_with_ip[ansible_loop.index0].ip,
+            'public_key': item.0 | b64decode,
+            'psk': item.1 | b64decode
           }
-          for user, pub, psk in zip(wireguard_users_with_ip,
-                                     client_public_keys_content,
-                                     client_psks_content)
         ]
       }}
+  loop: "{{ client_public_keys_content | zip(client_psks_content) | list }}"
+  loop_control:
+    extended: true
+    label: "{{ item.0 | b64decode }}"
 
 - name: Render server config
   template:

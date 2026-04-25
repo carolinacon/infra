@@ -3,3 +3,7 @@
   ansible.builtin.service:
     name: ssh
     state: reloaded
+
+- name: Reload ufw
+  become: true
+  ansible.builtin.command: ufw reload
