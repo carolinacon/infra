@@ -1,5 +1,5 @@
-- name: Provisioning lighthouse host
-  hosts: lighthouse
+- name: Provisioning vpn host
+  hosts: cc-vpn
   handlers:
     - name: Importing handlers
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml

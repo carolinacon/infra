@@ -12,12 +12,12 @@ data "vultr_ssh_key" "shared_ssh" {
   }
 }
 
-resource "vultr_instance" "definednet_lighthouse" {
+resource "vultr_instance" "wg_vpn" {
   plan        = var.plan
   region      = var.region
   os_id       = var.os_id
-  hostname    = "cc-lighthouse"
-  label = "lighthouse"
+  hostname    = "cc-vpn"
+  label = "cc-vpn"
   enable_ipv6 = true
   backups = "enabled"
   backups_schedule {
