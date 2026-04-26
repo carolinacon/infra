@@ -2,4 +2,5 @@
   systemd:
     name: "wg-quick@{{ wg_interface }}"
     state: restarted
+    enabled: true
   when: wg_manage_service

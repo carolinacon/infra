@@ -21,3 +21,6 @@ wg_address: '{{ wg_ip_base ~ ".1/24" }}'
 
 # Optional: manage service
 wg_manage_service: true
+
+# Client routing: set to 0.0.0.0/0,::/0 for full tunnel, or specific networks for split tunnel
+wg_client_allowed_ips: '0.0.0.0/0,::/0'

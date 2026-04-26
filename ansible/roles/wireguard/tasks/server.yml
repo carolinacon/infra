@@ -47,7 +47,7 @@
   loop: "{{ client_public_keys_content | zip(client_psks_content) | list }}"
   loop_control:
     extended: true
-    label: "{{ item.0 | b64decode }}"
+    label: "{{ wireguard_users_with_ip[ansible_loop.index0].name }}"
 
 - name: Render server config
   template:
