@@ -55,6 +55,34 @@
         pip_install_packages:
         - docker
 
+    # https://docs.pangolin.net/self-host/quick-install#prerequisites
+    - name: Allowing tcp ports for Pangolin
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        comment: tcp Pangolin ports
+      loop:
+        - 80
+        - 443
+
+    - name: Allowing udp ports for Pangolin
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: udp
+        comment: udp Pangolin ports
+      loop:
+        - 21820
+        - 51820
+
+    # - name: Deploy Pangolin
+    #   ansible.builtin.include_role:
+    #     name: pangolin
+    #   vars:
+    #     pangolin_domain: {{ lookup("env", "PANGOLIN_DOMAIN") }}
+    #     pangolin_email:  {{ lookup("env", "PANGOLIN_EMAIL") }}
+
 - name: Provisioning pretalx host
   hosts: pretalx
   handlers:
