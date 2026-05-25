@@ -16,3 +16,11 @@ roles:
     version: 3.1.2
     scm: git
     src: https://github.com/geerlingguy/ansible-role-pip.git
+  - name: anxs.postgresql
+    version: v1.17.0
+    scm: git
+    src: https://github.com/ANXS/postgresql.git
+  - name: pretalx
+    version: 421b485b1fa56616f2be9d6a7b30f5459a2720ce
+    scm: git
+    src: https://github.com/pretalx/ansible-pretalx.git

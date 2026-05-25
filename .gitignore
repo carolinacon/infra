@@ -1,3 +1,6 @@
+.ai_reference/
+.claude/
+.vscode/
 # Local .terraform directories
 .terraform/
 
