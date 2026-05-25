@@ -5,10 +5,9 @@
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
 
   pre_tasks:
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: true
-        cache_valid_time: 3600
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+
   vars:
     # printf CC | xxd
     wireguard_port: 4343
@@ -44,3 +43,17 @@
         to_ip: "any"
         comment: forwarding wg traffic
         route: true
+
+# - name: Provisioning pretalx host
+#   hosts: pretalx
+#   handlers:
+#     - name: Importing handlers
+#       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+
+#   pre_tasks:
+#     - name: Importing handlers
+#       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+
+#   tasks:
+#     - name: Hardening servers
+#       ansible.builtin.import_tasks: ./tasks/hardening.yaml

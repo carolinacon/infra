@@ -24,8 +24,17 @@
     rule: limit
     port: ssh
     proto: tcp
-    comment: Limit ssh connections to prevent bruteforcing
     state: enabled
+    comment: Limit ssh connections to prevent bruteforcing
+  when: inventory_hostname == 'cc-vpn'
+
+- name: Allow all traffic from cc-vpn host
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ hostvars['cc-vpn']['ansible_facts']['default_ipv4']['address'] }}"
+    comment: Allow all traffic from cc-vpn host
+    state: enabled
+  when: inventory_hostname != 'cc-vpn'
 
 # https://github.com/trailofbits/algo/blob/3750bac55b637b02d5130d839a2efc49f3a523aa/roles/common/tasks/unattended-upgrades.yml
 - name: Configure unattended-upgrades
