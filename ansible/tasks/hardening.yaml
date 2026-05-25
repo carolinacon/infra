@@ -31,10 +31,17 @@
 - name: Allow all traffic from cc-vpn host
   community.general.ufw:
     rule: allow
-    from_ip: "{{ hostvars['cc-vpn']['ansible_facts']['default_ipv4']['address'] }}"
+    from_ip: "{{ hostvars['cc-vpn']['ansible_host'] }}"
     comment: Allow all traffic from cc-vpn host
     state: enabled
   when: inventory_hostname != 'cc-vpn'
+
+- name: Delete default UFW rules from Vultr
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    delete: true
 
 # https://github.com/trailofbits/algo/blob/3750bac55b637b02d5130d839a2efc49f3a523aa/roles/common/tasks/unattended-upgrades.yml
 - name: Configure unattended-upgrades

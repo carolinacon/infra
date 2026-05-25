@@ -44,16 +44,16 @@
         comment: forwarding wg traffic
         route: true
 
-# - name: Provisioning pretalx host
-#   hosts: pretalx
-#   handlers:
-#     - name: Importing handlers
-#       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+- name: Provisioning pretalx host
+  hosts: pretalx
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
 
-#   pre_tasks:
-#     - name: Importing handlers
-#       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+  pre_tasks:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
 
-#   tasks:
-#     - name: Hardening servers
-#       ansible.builtin.import_tasks: ./tasks/hardening.yaml
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
