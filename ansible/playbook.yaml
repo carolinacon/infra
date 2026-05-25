@@ -83,6 +83,90 @@
     #     pangolin_domain: '{{ lookup("env", "PANGOLIN_DASH_DOMAIN") }}'
     #     pangolin_email:  '{{ lookup("env", "PANGOLIN_EMAIL") }}'
     #     pangolin_base_domain: '{{ lookup("env", "PANGOLIN_DOMAIN") }}'
+    ## commands run on host manually...
+    # $ curl -fsSLOJ 'https://static.pangolin.net/get-installer.sh'
+    # $ chmod u+x get-installer.sh
+    # $ ./get-installer.sh
+    # [INFO] Installing latest version of installer...
+    # [INFO] Fetching latest version from GitHub...
+    # [INFO] Latest version: v1.18.4
+    # [INFO] Detected platform: linux_amd64
+    # [INFO] Install directory: /root
+    # [INFO] Downloading installer from https://github.com/fosrl/pangolin/releases/download/1.18.4/installer_linux_amd64
+    # [INFO] Installer downloaded to /root/installer
+    # [INFO] Installation successful!
+    # [INFO] Installer is ready to use!
+    # $ ./installer 
+    # Welcome to the Pangolin installer!
+    # This installer will help you set up Pangolin on your server.
+    # 
+    # Please make sure you have the following prerequisites:
+    # - Open TCP ports 80 and 443 and UDP ports 51820 and 21820 on your VPS and firewall.
+    # 
+    # Lets get started!
+    # 
+    # === Installation Directory ===
+    # No existing Pangolin installation detected.
+    # Enter the installation directory: /opt/pangolin
+    # Directory /opt/pangolin does not exist. Create it?: Yes
+    # Created directory: /opt/pangolin
+    # Installation directory: /opt/pangolin
+    # 
+    # === Basic Configuration ===
+    # Do you want to install the Enterprise version of Pangolin? The EE is free for personal use or for businesses making less than 100k USD annually.: No
+    # Enter your base domain (no subdomain e.g. example.com): <redacted>
+    # Enter the domain for the Pangolin dashboard: <redacted>
+    # Enter email for Let's Encrypt certificates: <redacted>
+    # Do you want to use Gerbil to allow tunneled connections: Yes
+    # 
+    # === Email Configuration ===
+    # Enable email functionality (SMTP): No
+    # 
+    # === Advanced Configuration ===
+    # Is your server IPv6 capable?: Yes
+    # Do you want to download the MaxMind GeoLite2 database for geoblocking functionality?: Yes
+    # 
+    # === Generating Configuration Files ===
+    # 
+    # Configuration files created successfully!
+    # 
+    # === Downloading MaxMind Database ===
+    # Downloading MaxMind GeoLite2 Country database...
+    #   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+    #                                  Dload  Upload   Total   Spent    Left  Speed
+    #   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+    # 100 4527k  100 4527k    0     0  5493k      0 --:--:-- --:--:-- --:--:-- 27.4M
+    # MaxMind GeoLite2 Country database downloaded successfully!
+    # 
+    # === Starting installation ===
+    # Would you like to install and start the containers?: Yes
+    # Would you like to run Pangolin as Docker or Podman containers?: docker
+    # Pulling the container images...
+    # [+] pull 8/8
+    #  ✔ Image docker.io/fosrl/pangolin:1.18.4 Pulled 0.7s
+    #  ✔ Image docker.io/fosrl/gerbil:1.4.0    Pulled 0.6s
+    #  ✔ Image docker.io/traefik:v3.6          Pulled 4.3s
+    # Starting containers...
+    # [+] up 4/4
+    #  ✔ Network pangolin   Created 0.1s
+    #  ✔ Container pangolin Healthy 13.3s
+    #  ✔ Container gerbil   Started 12.5s
+    #  ✔ Container traefik  Started 13.3s
+    # 
+    # === Setup Token ===
+    # Waiting for Pangolin to generate setup token...
+    # Setup token: <redacted>
+    # 
+    # This token is required to register the first admin account in the web UI at:
+    # https://<redacted>/auth/initial-setup
+    # 
+    # Save this token securely. It will be invalid after the first admin is created.
+    # 
+    # Installation complete!
+    # 
+    # To complete the initial setup, please visit:
+    # https://<redacted>/auth/initial-setup
+
 
 - name: Provisioning pretalx host
   hosts: pretalx
