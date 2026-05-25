@@ -1,0 +1,36 @@
+---
+- name: Create Docker network for Pangolin
+  community.docker.docker_network:
+    name: "{{ pangolin_docker_network }}"
+    state: present
+
+- name: Pull Docker images
+  community.docker.docker_image:
+    name: "{{ item.image }}:{{ item.version }}"
+    source: pull
+    state: present
+  loop:
+    - image: "{{ pangolin_pangolin_image }}"
+      version: "{{ pangolin_pangolin_version }}"
+    - image: "{{ pangolin_gerbil_image }}"
+      version: "{{ pangolin_gerbil_version }}"
+    - image: "{{ pangolin_traefik_image }}"
+      version: "{{ pangolin_traefik_version }}"
+  loop_control:
+    label: "{{ item.image }}:{{ item.version }}"
+
+- name: Deploy Pangolin stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ pangolin_install_dir }}"
+    project_name: "{{ pangolin_compose_project_name }}"
+    state: present
+  register: pangolin_deploy_result
+
+- name: Wait for Pangolin to be healthy
+  ansible.builtin.wait_for:
+    host: localhost
+    port: 443
+    state: started
+    delay: 10
+    timeout: 120
+  when: pangolin_deploy_result.changed

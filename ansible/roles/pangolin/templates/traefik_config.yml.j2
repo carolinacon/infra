@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+---
+# Traefik Static Configuration
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: false
+  insecure: false
+
+log:
+  level: INFO
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: {{ pangolin_docker_network }}
+  file:
+    filename: /etc/traefik/dynamic_config.yml
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: {{ pangolin_email }}
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web

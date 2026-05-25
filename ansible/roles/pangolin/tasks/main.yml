@@ -1,0 +1,24 @@
+---
+- name: Validate configuration
+  ansible.builtin.import_tasks: validate.yml
+  tags:
+    - pangolin
+    - validate
+
+- name: Create directory structure
+  ansible.builtin.import_tasks: directories.yml
+  tags:
+    - pangolin
+    - directories
+
+- name: Configure Pangolin
+  ansible.builtin.import_tasks: config.yml
+  tags:
+    - pangolin
+    - config
+
+- name: Deploy Pangolin with Docker Compose
+  ansible.builtin.import_tasks: compose.yml
+  tags:
+    - pangolin
+    - compose

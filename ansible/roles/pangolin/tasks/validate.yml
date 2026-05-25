@@ -1,0 +1,38 @@
+---
+- name: Validate required variables are defined
+  ansible.builtin.assert:
+    that:
+      - pangolin_domain is defined
+      - pangolin_domain | length > 0
+      - pangolin_email is defined
+      - pangolin_email | length > 0
+      - pangolin_pangolin_version is defined
+      - pangolin_pangolin_version | length > 0
+      - pangolin_gerbil_version is defined
+      - pangolin_gerbil_version | length > 0
+      - pangolin_traefik_version is defined
+      - pangolin_traefik_version | length > 0
+    fail_msg: "Required variables must be defined: pangolin_domain, pangolin_email, and image versions"
+    success_msg: "All required variables are properly defined"
+
+- name: Validate install directory is absolute path
+  ansible.builtin.assert:
+    that:
+      - pangolin_install_dir is defined
+      - pangolin_install_dir | regex_search('^/')
+    fail_msg: "pangolin_install_dir must be an absolute path starting with /"
+    success_msg: "Install directory path is valid"
+
+- name: Validate email format
+  ansible.builtin.assert:
+    that:
+      - pangolin_email is regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+    fail_msg: "pangolin_email must be a valid email address"
+    success_msg: "Email format is valid"
+
+- name: Validate domain format
+  ansible.builtin.assert:
+    that:
+      - pangolin_domain is regex("^[a-zA-Z0-9][a-zA-Z0-9-*.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,}$")
+    fail_msg: "pangolin_domain must be a valid domain name (wildcards allowed)"
+    success_msg: "Domain format is valid"

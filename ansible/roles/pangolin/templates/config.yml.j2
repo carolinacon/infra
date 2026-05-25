@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+---
+# Pangolin Configuration
+
+server:
+  domain: {{ pangolin_domain }}
+  timezone: {{ pangolin_timezone }}
+
+database:
+  type: sqlite
+  path: /app/db/db.sqlite
+
+logging:
+  level: {{ pangolin_log_level }}
+  path: /app/logs
+
+security:
+  https_only: true
+  secure_cookies: true

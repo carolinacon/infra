@@ -1,0 +1,29 @@
+---
+- name: Create Pangolin base directory
+  ansible.builtin.file:
+    path: "{{ pangolin_install_dir }}"
+    state: directory
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0750"
+
+- name: Create Pangolin config directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ pangolin_install_dir }}/config"
+      mode: "0750"
+    - path: "{{ pangolin_install_dir }}/config/traefik"
+      mode: "0750"
+    - path: "{{ pangolin_install_dir }}/config/db"
+      mode: "0750"
+    - path: "{{ pangolin_install_dir }}/config/logs"
+      mode: "0750"
+    - path: "{{ pangolin_install_dir }}/config/letsencrypt"
+      mode: "0700"
+  loop_control:
+    label: "{{ item.path }}"

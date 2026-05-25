@@ -1,0 +1,50 @@
+---
+# Pangolin Role Default Variables
+
+# Installation directory
+pangolin_install_dir: /opt/pangolin
+
+# Domain and email configuration
+pangolin_domain: pangolin.example.com
+pangolin_email: admin@example.com
+
+# Timezone configuration
+pangolin_timezone: UTC
+
+# User/Group IDs for containers
+pangolin_uid: 1000
+pangolin_gid: 1000
+
+# Docker image configuration
+pangolin_pangolin_image: docker.io/fosrl/pangolin
+pangolin_pangolin_version: "1.18.4"
+
+pangolin_gerbil_image: docker.io/fosrl/gerbil
+pangolin_gerbil_version: "1.4.0"
+
+pangolin_traefik_image: docker.io/library/traefik
+pangolin_traefik_version: "v3.7.1"
+
+# Feature flags
+pangolin_enable_auto_updates: false
+
+# Docker Compose configuration
+pangolin_compose_project_name: pangolin
+
+# Logging configuration
+pangolin_log_level: INFO
+
+# Container restart policy
+pangolin_container_restart_policy: unless-stopped
+
+# Exposed ports
+pangolin_exposed_ports:
+  - "80:80"
+  - "443:443"
+
+# Docker network name
+pangolin_docker_network: pangolin
+
+# File/directory ownership
+pangolin_owner: root
+pangolin_group: docker

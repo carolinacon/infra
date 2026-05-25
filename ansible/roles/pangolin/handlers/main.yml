@@ -1,0 +1,13 @@
+---
+- name: Restart Pangolin Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ pangolin_install_dir }}"
+    project_name: "{{ pangolin_compose_project_name }}"
+    state: restarted
+  listen: Restart Pangolin Stack
+
+- name: Reload Docker
+  ansible.builtin.systemd:
+    name: docker
+    state: reloaded
+  listen: Reload Docker

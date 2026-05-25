@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: elreydetoda
+  description: Ansible role for deploying Pangolin Community Edition with Docker Compose
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+
+  galaxy_tags:
+    - pangolin
+    - docker
+    - traefik
+    - proxy
+    - networking
+
+dependencies: []
+
+collections:
+  - community.docker
+  - ansible.posix

@@ -1,0 +1,45 @@
+---
+- name: Create acme.json file for Let's Encrypt
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ pangolin_install_dir }}/config/letsencrypt/acme.json"
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0600"
+    force: false
+
+- name: Template docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ pangolin_install_dir }}/docker-compose.yml"
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0640"
+  notify: Restart Pangolin Stack
+
+- name: Template Pangolin config.yml
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ pangolin_install_dir }}/config/config.yml"
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0640"
+  notify: Restart Pangolin Stack
+
+- name: Template Traefik static configuration
+  ansible.builtin.template:
+    src: traefik_config.yml.j2
+    dest: "{{ pangolin_install_dir }}/config/traefik/traefik_config.yml"
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0640"
+  notify: Restart Pangolin Stack
+
+- name: Template Traefik dynamic configuration
+  ansible.builtin.template:
+    src: dynamic_config.yml.j2
+    dest: "{{ pangolin_install_dir }}/config/traefik/dynamic_config.yml"
+    owner: "{{ pangolin_owner }}"
+    group: "{{ pangolin_group }}"
+    mode: "0640"
+  notify: Restart Pangolin Stack
