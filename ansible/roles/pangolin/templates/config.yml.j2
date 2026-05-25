@@ -1,19 +1,31 @@
 # {{ ansible_managed }}
+# To see all available options, please visit the docs:
+# https://docs.pangolin.net/
 ---
-# Pangolin Configuration
+gerbil:
+  start_port: 51820
+  base_endpoint: "{{ pangolin_domain }}"
+
+app:
+  dashboard_url: "https://{{ pangolin_domain }}"
+  log_level: "{{ pangolin_log_level }}"
+  telemetry:
+    anonymous_usage: {{ pangolin_telemetry_enabled | default(true) | lower }}
+
+domains:
+  domain1:
+    base_domain: "{{ pangolin_base_domain | default(pangolin_domain) }}"
 
 server:
-  domain: {{ pangolin_domain }}
-  timezone: {{ pangolin_timezone }}
+  secret: "{{ pangolin_secret }}"
+  cors:
+    origins: ["https://{{ pangolin_domain }}"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    allowed_headers: ["X-CSRF-Token", "Content-Type"]
+    credentials: false
 
-database:
-  type: sqlite
-  path: /app/db/db.sqlite
-
-logging:
-  level: {{ pangolin_log_level }}
-  path: /app/logs
-
-security:
-  https_only: true
-  secure_cookies: true
+flags:
+  require_email_verification: {{ pangolin_require_email_verification | default(false) | lower }}
+  disable_signup_without_invite: {{ pangolin_disable_signup_without_invite | default(true) | lower }}
+  disable_user_create_org: {{ pangolin_disable_user_create_org | default(false) | lower }}
+  allow_raw_resources: {{ pangolin_allow_raw_resources | default(true) | lower }}

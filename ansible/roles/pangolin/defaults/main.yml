@@ -32,7 +32,7 @@ pangolin_enable_auto_updates: false
 pangolin_compose_project_name: pangolin
 
 # Logging configuration
-pangolin_log_level: INFO
+pangolin_log_level: info
 
 # Container restart policy
 pangolin_container_restart_policy: unless-stopped
@@ -48,3 +48,14 @@ pangolin_docker_network: pangolin
 # File/directory ownership
 pangolin_owner: root
 pangolin_group: docker
+
+# Pangolin application configuration
+pangolin_secret: ""  # Will be auto-generated if not provided
+pangolin_base_domain: ""  # Optional: defaults to pangolin_domain
+
+# Feature flags for Pangolin
+pangolin_telemetry_enabled: false
+pangolin_require_email_verification: false
+pangolin_disable_signup_without_invite: true
+pangolin_disable_user_create_org: false
+pangolin_allow_raw_resources: true

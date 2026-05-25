@@ -1,9 +1,4 @@
 ---
-- name: Create Docker network for Pangolin
-  community.docker.docker_network:
-    name: "{{ pangolin_docker_network }}"
-    state: present
-
 - name: Pull Docker images
   community.docker.docker_image:
     name: "{{ item.image }}:{{ item.version }}"

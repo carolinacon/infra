@@ -1,86 +1,71 @@
 # {{ ansible_managed }}
 ---
+name: {{ pangolin_compose_project_name }}
+
 services:
+
   pangolin:
     image: {{ pangolin_pangolin_image }}:{{ pangolin_pangolin_version }}
     container_name: {{ pangolin_compose_project_name }}_pangolin
     restart: {{ pangolin_container_restart_policy }}
-    networks:
-      - {{ pangolin_docker_network }}
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 256m
     volumes:
-      - ./config/config.yml:/app/config/config.yml:ro
-      - ./config/db:/app/db
-      - ./config/logs:/app/logs
+      - ./config:/app/config
     environment:
       - TZ={{ pangolin_timezone }}
-      - LOG_LEVEL={{ pangolin_log_level }}
-    security_opt:
-      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.pangolin.rule=Host(`{{ pangolin_domain }}`)"
-      - "traefik.http.routers.pangolin.entrypoints=websecure"
-      - "traefik.http.routers.pangolin.tls=true"
-      - "traefik.http.routers.pangolin.tls.certresolver=letsencrypt"
-      - "traefik.http.services.pangolin.loadbalancer.server.port=3001"
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/"]
+      interval: "3s"
+      timeout: "3s"
+      retries: 15
 
   gerbil:
     image: {{ pangolin_gerbil_image }}:{{ pangolin_gerbil_version }}
     container_name: {{ pangolin_compose_project_name }}_gerbil
     restart: {{ pangolin_container_restart_policy }}
-    networks:
-      - {{ pangolin_docker_network }}
-    volumes:
-      - ./config/config.yml:/app/config/config.yml:ro
-    environment:
-      - TZ={{ pangolin_timezone }}
-      - LOG_LEVEL={{ pangolin_log_level }}
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
     depends_on:
       pangolin:
         condition: service_healthy
+    command:
+      - --reachableAt=http://gerbil:3004
+      - --generateAndSaveKeyTo=/var/config/key
+      - --remoteConfig=http://pangolin:3001/api/v1/
+    volumes:
+      - ./config/:/var/config
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    ports:
+      - 51820:51820/udp
+      - 21820:21820/udp
+      - 443:443
+      - 80:80
+    environment:
+      - TZ={{ pangolin_timezone }}
 
   traefik:
     image: {{ pangolin_traefik_image }}:{{ pangolin_traefik_version }}
     container_name: {{ pangolin_compose_project_name }}_traefik
     restart: {{ pangolin_container_restart_policy }}
-    networks:
-      - {{ pangolin_docker_network }}
-    ports:
-{% for port in pangolin_exposed_ports %}
-      - "{{ port }}"
-{% endfor %}
+    network_mode: service:gerbil
+    depends_on:
+      pangolin:
+        condition: service_healthy
+    command:
+      - --configFile=/etc/traefik/traefik_config.yml
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./config/traefik/traefik_config.yml:/etc/traefik/traefik.yml:ro
-      - ./config/traefik/dynamic_config.yml:/etc/traefik/dynamic_config.yml:ro
+      - ./config/traefik:/etc/traefik:ro
       - ./config/letsencrypt:/letsencrypt
     environment:
       - TZ={{ pangolin_timezone }}
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 networks:
-  {{ pangolin_docker_network }}:
-    external: true
+  default:
+    driver: bridge
+    name: {{ pangolin_docker_network }}
+    enable_ipv6: true

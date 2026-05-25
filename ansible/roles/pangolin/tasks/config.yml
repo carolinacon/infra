@@ -1,4 +1,10 @@
 ---
+- name: Generate random secret if not provided
+  ansible.builtin.set_fact:
+    pangolin_secret: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=64') }}"
+  when: pangolin_secret == ""
+  no_log: true
+
 - name: Create acme.json file for Let's Encrypt
   ansible.builtin.copy:
     content: ""

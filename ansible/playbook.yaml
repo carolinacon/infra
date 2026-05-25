@@ -46,7 +46,7 @@
 
     - name: Install Docker
       ansible.builtin.include_role:
-        name: geerlingguy.pip
+        name: geerlingguy.docker
 
     - name: Install python lib for ansible via docker
       ansible.builtin.include_role:
@@ -80,8 +80,9 @@
     #   ansible.builtin.include_role:
     #     name: pangolin
     #   vars:
-    #     pangolin_domain: {{ lookup("env", "PANGOLIN_DOMAIN") }}
-    #     pangolin_email:  {{ lookup("env", "PANGOLIN_EMAIL") }}
+    #     pangolin_domain: '{{ lookup("env", "PANGOLIN_DASH_DOMAIN") }}'
+    #     pangolin_email:  '{{ lookup("env", "PANGOLIN_EMAIL") }}'
+    #     pangolin_base_domain: '{{ lookup("env", "PANGOLIN_DOMAIN") }}'
 
 - name: Provisioning pretalx host
   hosts: pretalx

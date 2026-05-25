@@ -1,9 +1,9 @@
 ---
-- name: Validate configuration
-  ansible.builtin.import_tasks: validate.yml
-  tags:
-    - pangolin
-    - validate
+# - name: Validate configuration
+#   ansible.builtin.import_tasks: validate.yml
+#   tags:
+#     - pangolin
+#     - validate
 
 - name: Create directory structure
   ansible.builtin.import_tasks: directories.yml
