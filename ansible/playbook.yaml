@@ -44,6 +44,17 @@
         comment: forwarding wg traffic
         route: true
 
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: geerlingguy.pip
+
+    - name: Install python lib for ansible via docker
+      ansible.builtin.include_role:
+        name: geerlingguy.pip
+      vars:
+        pip_install_packages:
+        - docker
+
 - name: Provisioning pretalx host
   hosts: pretalx
   handlers:

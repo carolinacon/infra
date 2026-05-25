@@ -1,3 +1,6 @@
 unattended_reboot:
   enabled: true
   time: 06:00
+ansible_ssh_common_args: >-
+  -o ForwardAgent=yes
+  -o ProxyJump={{ hostvars['cc-vpn']['ansible_user'] }}@{{ hostvars['cc-vpn']['ansible_host'] }}

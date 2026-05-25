@@ -1,11 +1,8 @@
 plugin: vultr.cloud.vultr
 api_key: '{{ lookup("env", "VULTR_API_KEY") }}'
+keyed_groups:
+  - key: vultr_label
+    prefix: label
 compose:
   ansible_host: vultr_main_ip or vultr_v6_main_ip
   ansible_user: '"root"'
-  ansible_ssh_common_args: >-
-    {{
-      ''
-      if vultr_label == 'cc-vpn'
-      else '-o ProxyJump=root@' ~ hostvars["cc-vpn"]["ansible_host"]
-    }}
