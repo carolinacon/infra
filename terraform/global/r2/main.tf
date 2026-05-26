@@ -93,6 +93,36 @@ resource "cloudflare_r2_bucket_lifecycle" "pretalx" {
   ]
 }
 
+data "terraform_remote_state" "pretalx" {
+  backend = "s3"
+  config = {
+    bucket       = "ccon-tfstate"
+    key          = "production/apps/pretalx/terraform.tfstate"
+    region       = "us-west-2"
+  }
+}
+
+resource "cloudflare_account_token" "pretalx_account_token" {
+  account_id = "60c2ac0eeb27fdbd60471f8e90e36596"
+  name       = "pretalx-r2-access-cold-feather-92d3"
+
+  policies = [{
+    effect = "allow"
+    permission_groups = [{
+      id = "2efd5506f9c8494dacb1fa10a3e7d5b6"
+      }, {
+      id = "6a018a9f2fc74eb6b293b0c548f38b39"
+    }]
+    resources = jsonencode({
+      "com.cloudflare.edge.r2.bucket.60c2ac0eeb27fdbd60471f8e90e36596_default_pretalx-assets" = "*"
+    })
+  }]
+  condition = {
+    request_ip = {
+      in     = ["${data.terraform_remote_state.pretalx.outputs.pretalx_instance_ipv4}/32"]
+    }
+  }
+}
 ###############################################################################
 # Outputs
 ###############################################################################
@@ -103,4 +133,13 @@ output "bucket_name" {
 
 output "s3_endpoint" {
   value = "https://${var.cloudflare_account_id}.r2.cloudflarestorage.com"
+}
+
+output "pretalx_access_key" {
+  value = cloudflare_account_token.pretalx_account_token.id
+  sensitive = true
+}
+output "pretalx_secret_key" {
+  value = sha256(cloudflare_account_token.pretalx_account_token.value)
+  sensitive = true
 }

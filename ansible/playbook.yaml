@@ -178,6 +178,110 @@
     - name: Importing handlers
       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
 
+  vars:
+    pretalx_database_name: pretalx
+    pretalx_database_user: pretalx
+    pretalx_database_password: '{{ lookup("env", "PRETALX_DB_PASSWORD") }}'
   tasks:
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
+    - name: Install system dependencies
+      ansible.builtin.package:
+        name:
+          - acl
+          - nginx
+          - python3-pip
+          - python3-venv
+          - redis-server
+          - build-essential
+          - libpq-dev
+          - libjpeg-dev
+          - zlib1g-dev
+          - libssl-dev
+          - git
+          - zstd
+        state: present
+
+    - name: Remove nginx default site
+      ansible.builtin.file:
+        name: '/etc/nginx/sites-enabled/default'
+        state: absent
+
+    - name: Start and enable Redis
+      ansible.builtin.service:
+        name: redis-server
+        state: started
+        enabled: true
+
+    - name: Install PostgreSQL
+      ansible.builtin.include_role:
+        name: anxs.postgresql
+      vars:
+        # PostgreSQL role configuration
+        postgresql_databases:
+          - name: '{{ pretalx_database_name }}'
+            owner: '{{ pretalx_database_user }}'
+        postgresql_users:
+          - name: '{{ pretalx_database_user }}'
+            pass: '{{ pretalx_database_password }}'
+        postgresql_locale: 'C.UTF-8'
+        postgresql_ctype: 'C.UTF-8'
+
+
+    - name: Install Pretalx
+      ansible.builtin.include_role:
+        name: pretalx
+      vars:
+        # Database configuration
+        pretalx_database_host: localhost
+        pretalx_database_port: 5432
+
+        # Pretalx site configuration
+        pretalx_domain: '{{ lookup("env", "PRETALX_DOMAIN") }}'
+        pretalx_url: 'https://{{ pretalx_domain }}'
+        pretalx_secret_key: '{{ lookup("env", "PRETALX_SECRET_KEY") }}'
+
+        # Mail configuration
+        pretalx_admin_mail: '{{ lookup("env", "PRETALX_ADMIN_EMAIL") }}'
+        pretalx_mail_from: '{{ lookup("env", "PRETALX_MAIL_FROM") }}'
+        pretalx_mail_host: '{{ lookup("env", "PRETALX_MAIL_HOST") }}'
+        pretalx_mail_port: '{{ lookup("env", "PRETALX_MAIL_PORT") | default("587") }}'
+        pretalx_mail_user: '{{ lookup("env", "PRETALX_MAIL_USER") }}'
+        pretalx_mail_password: '{{ lookup("env", "PRETALX_MAIL_PASSWORD") }}'
+        pretalx_mail_tls: 'True'
+        pretalx_mail_ssl: 'False'
+
+        # Redis configuration
+        pretalx_redis: True
+
+        # Nginx configuration
+        pretalx_nginx: true
+        pretalx_nginx_path: '/etc/nginx/sites-enabled'
+
+        # Pretalx version
+        pretalx_version: "2026.1.2"
+
+        # S3 configuration for media storage
+        # Note: This configuration is added to pretalx.cfg
+        pretalx_additional_config: |
+          [storages]
+          default = storages.backends.s3boto3.S3Boto3Storage
+          staticfiles = django.contrib.staticfiles.storage.StaticFilesStorage
+
+          [s3]
+          bucket_name = {{ lookup("env", "PRETALX_S3_BUCKET") }}
+          region_name = {{ lookup("env", "PRETALX_S3_REGION") | default("auto") }}
+          endpoint_url = {{ lookup("env", "PRETALX_S3_ENDPOINT") }}
+          access_key_id = {{ lookup("env", "PRETALX_S3_ACCESS_KEY") }}
+          secret_access_key = {{ lookup("env", "PRETALX_S3_SECRET_KEY") }}
+          custom_domain = {{ lookup("env", "PRETALX_S3_CUSTOM_DOMAIN") | default("") }}
+
+    - name: Install boto3 for S3 storage support
+      ansible.builtin.pip:
+        name: boto3
+        state: latest
+        virtualenv: '{{ pretalx_virtualenv }}'
+      become: true
+      become_user: '{{ pretalx_system_user }}'
+      when: lookup("env", "PRETALX_S3_BUCKET") | length > 0
