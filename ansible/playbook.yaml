@@ -182,6 +182,10 @@
     pretalx_database_name: pretalx
     pretalx_database_user: pretalx
     pretalx_database_password: '{{ lookup("env", "PRETALX_DB_PASSWORD") }}'
+    pretalx_system_user: "pretalx"
+    pretalx_instance_identifier: "main"
+    pretalx_virtualenv: /usr/share/webapps/pretalx{{ pretalx_instance_identifier }}/venv/
+
   tasks:
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
@@ -228,7 +232,6 @@
         postgresql_locale: 'C.UTF-8'
         postgresql_ctype: 'C.UTF-8'
 
-
     - name: Install Pretalx
       ansible.builtin.include_role:
         name: pretalx
@@ -258,9 +261,12 @@
         # Nginx configuration
         pretalx_nginx: true
         pretalx_nginx_path: '/etc/nginx/sites-enabled'
+        pretalx_webserver_group: 'www-data'
+        pretalx_nginx_http_only: true
 
         # Pretalx version
         pretalx_version: "2026.1.2"
+        pretalx_plugins: False
 
         # S3 configuration for media storage
         # Note: This configuration is added to pretalx.cfg
