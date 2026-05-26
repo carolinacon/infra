@@ -232,6 +232,35 @@
         postgresql_locale: 'C.UTF-8'
         postgresql_ctype: 'C.UTF-8'
 
+    # become pretalx user by doing:
+    # $ su - pretalx
+    # $ bash
+    # $ source /usr/share/webapps/pretalxmain/venv/bin/activate
+    # (venv) $ python3 -m pretalx <cmd>
+    ## Setup after installation
+    # $ python3 -m pretalx check --deploy
+    # $ python3 -m pretalx migrate
+    # $ python3 -m pretalx rebuild
+    # $ python3 -m pretalx init
+    # Welcome to pretalx! This is my initialization command, please use it only once.
+    # You can abort this command at any time using C-c, and it will save no data.
+    # 
+    # Let's get you a user with the right to create new events and access every event on this pretalx instance.
+    # Email: <redacted>
+    # Password: 
+    # Password (again): 
+    # Superuser created successfully.
+    # 
+    # Let's also create a first organiser: This will allow you to invite further people and create events.
+    # 
+    # Name (e.g. "The Conference Organiser"): Main CarolinaCon Admin
+    # Slug (e.g. "conforg", used in urls): <redacted>
+    # 
+    # Now that this is done, you can:
+    #  - Create your first event at https://cfp.carolinacon.org/orga/event/new/
+    #  - Invite somebody to the organiser team at https://cfp.carolinacon.org/orga/organiser/<redacted>/teams/1/
+    ## misc
+    # auto-checks for updates here: https://cfp.carolinacon.org/orga/admin/update/
     - name: Install Pretalx
       ansible.builtin.include_role:
         name: pretalx
@@ -254,9 +283,6 @@
         pretalx_mail_password: '{{ lookup("env", "PRETALX_MAIL_PASSWORD") }}'
         pretalx_mail_tls: 'True'
         pretalx_mail_ssl: 'False'
-
-        # Redis configuration
-        pretalx_redis: True
 
         # Nginx configuration
         pretalx_nginx: true
