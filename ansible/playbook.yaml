@@ -183,8 +183,24 @@
     pretalx_database_user: pretalx
     pretalx_database_password: '{{ lookup("env", "PRETALX_DB_PASSWORD") }}'
     pretalx_system_user: "pretalx"
+    pretalx_system_home: "/home/{{ pretalx_system_user }}"
     pretalx_instance_identifier: "main"
     pretalx_virtualenv: /usr/share/webapps/pretalx{{ pretalx_instance_identifier }}/venv/
+    # for backup and restoration
+    pretalx_backup_dir: /var/backups/pretalx
+    pretalx_config_file: '{{ pretalx_system_home }}/.pretalx.cfg'
+    pretalx_data_dir: /usr/share/webapps/pretalx{{ pretalx_instance_identifier }}/data/
+    pretalx_media_dir: /usr/share/webapps/pretalx{{ pretalx_instance_identifier }}/media/
+    pretalx_pg_host: localhost
+    pretalx_pg_port: 5432
+    pretalx_backup_bucket: '{{ lookup("env", "PRETALX_S3_BUCKET") }}'
+    pretalx_backup_retention_local: 14
+    pretalx_backup_retention_remote: 30
+
+    r2_account_endpoint: '{{ lookup("env", "PRETALX_S3_ENDPOINT") }}'
+    r2_access_key: '{{ lookup("env", "PRETALX_S3_ACCESS_KEY") }}'
+    r2_secret_key: '{{ lookup("env", "PRETALX_S3_SECRET_KEY") }}'
+
 
   tasks:
     - name: Hardening servers
@@ -205,6 +221,13 @@
           - libssl-dev
           - git
           - zstd
+          # For backup/restoration
+          - postgresql-client
+          - rsync
+          - tar
+          - gzip
+          - zstd
+          - rclone
         state: present
 
     - name: Remove nginx default site
@@ -313,11 +336,119 @@
         #  secret_access_key = {{ lookup("env", "PRETALX_S3_SECRET_KEY") }}
         #  custom_domain = {{ lookup("env", "PRETALX_S3_CUSTOM_DOMAIN") | default("") }}
 
-    - name: Install boto3 for S3 storage support
-      ansible.builtin.pip:
-        name: boto3
-        state: latest
-        virtualenv: '{{ pretalx_virtualenv }}'
-      become: true
-      become_user: '{{ pretalx_system_user }}'
-      when: lookup("env", "PRETALX_S3_BUCKET") | length > 0
+    ## S3 not working
+    # - name: Install boto3 for S3 storage support
+    #   ansible.builtin.pip:
+    #     name: boto3
+    #     state: latest
+    #     virtualenv: '{{ pretalx_virtualenv }}'
+    #   become: true
+    #   become_user: '{{ pretalx_system_user }}'
+    #   when: lookup("env", "PRETALX_S3_BUCKET") | length > 0
+    - name: Create backup directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+      loop:
+        - "{{ pretalx_backup_dir }}"
+        - "{{ pretalx_backup_dir }}/tmp"
+        - "{{ pretalx_backup_dir }}/archive"
+        - "{{ pretalx_backup_dir }}/logs"
+
+    - name: Create rclone configuration directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+      loop:
+        - "/root/.config"
+        - "/root/.config/rclone"
+
+    - name: Install rclone configuration
+      ansible.builtin.copy:
+        dest: /root/.config/rclone/rclone.conf
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = {{ r2_access_key }}
+          secret_access_key = {{ r2_secret_key }}
+          endpoint = {{ r2_account_endpoint }}
+          acl = private
+          no_check_bucket = true
+
+    - name: Install pretalx backup script
+      ansible.builtin.template:
+        src: pretalx-backup.sh.j2
+        dest: /usr/local/sbin/pretalx-backup.sh
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Install systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/pretalx-backup.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Pretalx Backup Job
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/pretalx-backup.sh
+
+          # Security hardening
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
+          NoNewPrivileges=true
+          ReadWritePaths={{ pretalx_backup_dir }} {{ pretalx_data_dir }}
+
+    - name: Install systemd timer
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/pretalx-backup.timer
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Run Pretalx backups nightly
+
+          [Timer]
+          OnCalendar=*-*-* 02:30:00
+          RandomizedDelaySec=15m
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start backup timer
+      ansible.builtin.systemd:
+        name: pretalx-backup.timer
+        enabled: true
+        state: started
+
+    - name: Install PostgreSQL password file
+      ansible.builtin.copy:
+        dest: /root/.pgpass
+        owner: pretalx
+        group: pretalx
+        mode: "0600"
+        content: |
+          {{ pretalx_pg_host }}:{{ pretalx_pg_port }}:{{ pretalx_database_name }}:{{ pretalx_database_user }}:{{ pretalx_database_password }}

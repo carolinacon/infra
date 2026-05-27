@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# https://chatgpt.com/share/6a16580b-10bc-83ea-9629-b12753e22c97
+set -Eeuo pipefail
+umask 027
+
+BACKUP_ROOT="{{ pretalx_backup_dir }}"
+TMP_DIR="${BACKUP_ROOT}/tmp"
+ARCHIVE_DIR="${BACKUP_ROOT}/archive"
+LOG_DIR="${BACKUP_ROOT}/logs"
+
+HOSTNAME_SHORT="$(hostname -s)"
+TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+BACKUP_NAME="pretalx_${HOSTNAME_SHORT}_${TIMESTAMP}"
+WORK_DIR="${TMP_DIR}/${BACKUP_NAME}"
+
+PGHOST="{{ pretalx_pg_host }}"
+PGPORT="{{ pretalx_pg_port }}"
+PGDATABASE="{{ pretalx_database_name }}"
+PGUSER="{{ pretalx_database_user }}"
+
+PRETALX_DATA_DIR="{{ pretalx_data_dir }}"
+PRETALX_MEDIA_DIR="{{ pretalx_media_dir }}"
+PRETALX_CONFIG="{{ pretalx_config_file }}"
+
+RCLONE_REMOTE="r2"
+RCLONE_BUCKET="{{ pretalx_backup_bucket }}"
+RCLONE_PATH="${RCLONE_REMOTE}:${RCLONE_BUCKET}/${HOSTNAME_SHORT}/daily"
+
+LOCAL_RETENTION_DAYS="{{ pretalx_backup_retention_local }}"
+REMOTE_RETENTION_DAYS="{{ pretalx_backup_retention_remote }}"
+
+mkdir -p \
+  "${TMP_DIR}" \
+  "${ARCHIVE_DIR}" \
+  "${LOG_DIR}"
+
+mkdir -p "${WORK_DIR}"
+
+pg_dump \
+  --format=custom \
+  --compress=9 \
+  --no-owner \
+  --no-privileges \
+  --host="${PGHOST}" \
+  --port="${PGPORT}" \
+  --username="${PGUSER}" \
+  "${PGDATABASE}" \
+  > "${WORK_DIR}/postgres.dump"
+
+rsync -aHAX \
+  --delete \
+  "${PRETALX_DATA_DIR}/" \
+  "${WORK_DIR}/data/"
+
+rsync -aHAX \
+  --delete \
+  "${PRETALX_MEDIA_DIR}/" \
+  "${WORK_DIR}/media/"
+
+install -m 0600 \
+  "${PRETALX_CONFIG}" \
+  "${WORK_DIR}/.pretalx.cfg"
+
+ARCHIVE_FILE="${ARCHIVE_DIR}/${BACKUP_NAME}.tar.zst"
+
+if command -v zstd >/dev/null 2>&1; then
+  tar --zstd -cpf "${ARCHIVE_FILE}" -C "${TMP_DIR}" "${BACKUP_NAME}"
+else
+  ARCHIVE_FILE="${ARCHIVE_DIR}/${BACKUP_NAME}.tar.gz"
+  tar -czpf "${ARCHIVE_FILE}" -C "${TMP_DIR}" "${BACKUP_NAME}"
+fi
+
+sha256sum "${ARCHIVE_FILE}" > "${ARCHIVE_FILE}.sha256"
+
+rclone copy \
+  "${ARCHIVE_FILE}" \
+  "${RCLONE_PATH}" \
+  --checksum \
+  --transfers 1 \
+  --s3-no-check-bucket
+
+rclone copy \
+  "${ARCHIVE_FILE}.sha256" \
+  "${RCLONE_PATH}" \
+  --checksum \
+  --transfers 1 \
+  --s3-no-check-bucket
+
+find "${ARCHIVE_DIR}" \
+  -type f \
+  -mtime +${LOCAL_RETENTION_DAYS} \
+  -delete
+
+rclone delete \
+  "${RCLONE_PATH}" \
+  --min-age "${REMOTE_RETENTION_DAYS}d"
