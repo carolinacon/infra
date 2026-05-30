@@ -7,7 +7,7 @@ variable "region" {
 variable "plan" {
   description = "Vultr server plan (vc2-1c-2gb is $10/month)"
   type        = string
-  default     = "vc2-1c-2gb"
+  default     = "vc2-1c-1gb"
 }
 
 variable "os_id" {
