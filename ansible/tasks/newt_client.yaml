@@ -1,0 +1,25 @@
+- name: Install Docker
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  when:
+    - newt_endpoint is defined
+    - newt_endpoint | length > 0
+
+- name: Connect to newt Pangolin site
+  community.docker.docker_container:
+    name: newt
+    image: docker.io/fosrl/newt:1.12.5
+    state: started
+    restart_policy: unless-stopped
+    network_mode: host
+    detach: true
+    command:
+      - --id
+      - "{{ newt_id }}"
+      - --secret
+      - "{{ newt_secret }}"
+      - --endpoint
+      - "{{ newt_endpoint }}"
+  when:
+    - newt_endpoint is defined
+    - newt_endpoint | length > 0

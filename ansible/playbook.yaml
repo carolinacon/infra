@@ -206,6 +206,9 @@
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/newt_client.yaml
+
     - name: Install system dependencies
       ansible.builtin.package:
         name:
@@ -257,7 +260,7 @@
 
     - name: Pause when restoring
       ansible.builtin.pause:
-        prompt: "DB should be re-created, restore back and rsync files"
+        prompt: "DB should be re-created, restore back and rsync files (Enter to continue)"
       when: pretalx_recovery is defined
 
     # become pretalx user by doing:

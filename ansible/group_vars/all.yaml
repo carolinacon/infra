@@ -4,3 +4,4 @@ unattended_reboot:
 ansible_ssh_common_args: >-
   -o ForwardAgent=yes
   -o ProxyJump={{ hostvars['cc-vpn']['ansible_user'] }}@{{ hostvars['cc-vpn']['ansible_host'] }}
+newt_endpoint: "{{ lookup('ansible.builtin.env', 'NEWT_ENDPOINT') }}"
