@@ -16,6 +16,8 @@
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
+    # SECURITY NOTE: If Wireguard VPN is re-enabled, uncomment these rules
+    # to explicitly allow VPN traffic rather than relying on out-of-band firewall changes.
     # - name: Allowing udp {{ wireguard_port }} for wireguard
     #   community.general.ufw:
     #     rule: allow
@@ -83,6 +85,13 @@
     #     pangolin_domain: '{{ lookup("env", "PANGOLIN_DASH_DOMAIN") }}'
     #     pangolin_email:  '{{ lookup("env", "PANGOLIN_EMAIL") }}'
     #     pangolin_base_domain: '{{ lookup("env", "PANGOLIN_DOMAIN") }}'
+    #
+    # SECURITY NOTE: The original instructions executed a downloaded script directly 
+    # as root via curl (curl -fsSLOJ 'https://static.pangolin.net/get-installer.sh' && ./get-installer.sh).
+    # This introduces a supply chain risk. 
+    # To mitigate, uncomment the 'pangolin' role above to deploy using 
+    # the deterministic Docker Compose templates in `roles/pangolin/templates/docker-compose.yml.j2`
+    # instead of running arbitrary shell scripts fetched at runtime.
     ## commands run on host manually...
     # $ curl -fsSLOJ 'https://static.pangolin.net/get-installer.sh'
     # $ chmod u+x get-installer.sh
@@ -421,7 +430,13 @@
           # Security hardening
           PrivateTmp=true
           ProtectSystem=strict
-          # ProtectHome=true
+          # ProtectHome is enabled to ensure the backup job running as root cannot read user home directories.
+          # The backup script relies on /var/backups and /usr/share/webapps, which are outside /home.
+          ProtectHome=true
+          # Isolate devices, prevent modifying kernel tunables, and restrict control group modifications
+          PrivateDevices=true
+          ProtectKernelTunables=true
+          ProtectControlGroups=true
           NoNewPrivileges=true
           ReadWritePaths={{ pretalx_backup_dir }} {{ pretalx_data_dir }}
 
