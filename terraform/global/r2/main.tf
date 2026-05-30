@@ -102,8 +102,17 @@ data "terraform_remote_state" "pretalx" {
   }
 }
 
+data "terraform_remote_state" "pretalx_dev" {
+  backend = "s3"
+  config = {
+    bucket       = "ccon-tfstate"
+    key          = "development/apps/pretalx/terraform.tfstate"
+    region       = "us-west-2"
+  }
+}
+
 resource "cloudflare_account_token" "pretalx_account_token" {
-  account_id = "60c2ac0eeb27fdbd60471f8e90e36596"
+  account_id = var.cloudflare_account_id
   name       = "pretalx-r2-access-cold-feather-92d3"
 
   policies = [{
@@ -114,14 +123,18 @@ resource "cloudflare_account_token" "pretalx_account_token" {
       id = "6a018a9f2fc74eb6b293b0c548f38b39"
     }]
     resources = jsonencode({
-      "com.cloudflare.edge.r2.bucket.60c2ac0eeb27fdbd60471f8e90e36596_default_pretalx-assets" = "*"
+      "com.cloudflare.edge.r2.bucket.${var.cloudflare_account_id}_default_pretalx-assets" = "*"
     })
   }]
-  condition = {
-    request_ip = {
-      in     = ["${data.terraform_remote_state.pretalx.outputs.pretalx_instance_ipv4}/32"]
-    }
-  }
+  ## Not working correctly...even when from legit IP it fails...
+  # condition = {
+  #   request_ip = {
+  #     in     = [
+  #       "${data.terraform_remote_state.pretalx.outputs.pretalx_instance_ipv4}/32",
+  #       "${data.terraform_remote_state.pretalx_dev.outputs.pretalx_instance_ipv4}/32"
+  #       ]
+  #   }
+  # }
 }
 ###############################################################################
 # Outputs
@@ -140,6 +153,10 @@ output "pretalx_access_key" {
   sensitive = true
 }
 output "pretalx_secret_key" {
+  value = cloudflare_account_token.pretalx_account_token.value
+  sensitive = true
+}
+output "pretalx_secret_key_r2_format" {
   value = sha256(cloudflare_account_token.pretalx_account_token.value)
   sensitive = true
 }

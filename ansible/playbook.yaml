@@ -16,44 +16,44 @@
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
-    - name: Allowing udp {{ wireguard_port }} for wireguard
-      community.general.ufw:
-        rule: allow
-        port: "{{ wireguard_port }}"
-        proto: udp
-        comment: wireguard port
+    # - name: Allowing udp {{ wireguard_port }} for wireguard
+    #   community.general.ufw:
+    #     rule: allow
+    #     port: "{{ wireguard_port }}"
+    #     proto: udp
+    #     comment: wireguard port
 
-    - name: Configuring Wireguard VPN
-      ansible.builtin.include_role:
-        name: wireguard
-      vars:
-        wg_listen_port: '{{ wireguard_port }}'
-        wg_endpoint: '{{ ansible_facts["default_ipv4"]["address"] }}:{{ wireguard_port }}'
-        wireguard_users:
-          - name: elrey
-            ip_octet: 2
-          - name: trvon
-            ip_octet: 3
+    # - name: Configuring Wireguard VPN
+    #   ansible.builtin.include_role:
+    #     name: wireguard
+    #   vars:
+    #     wg_listen_port: '{{ wireguard_port }}'
+    #     wg_endpoint: '{{ ansible_facts["default_ipv4"]["address"] }}:{{ wireguard_port }}'
+    #     wireguard_users:
+    #       - name: elrey
+    #         ip_octet: 2
+    #       - name: trvon
+    #         ip_octet: 3
 
-    - name: Allowing forwarding traffic from VPN to Internet
-      community.general.ufw:
-        rule: allow
-        interface_in: 'wg0'
-        interface_out: '{{ ansible_facts["default_ipv4"]["interface"] }}'
-        to_ip: "any"
-        comment: forwarding wg traffic
-        route: true
+    # - name: Allowing forwarding traffic from VPN to Internet
+    #   community.general.ufw:
+    #     rule: allow
+    #     interface_in: 'wg0'
+    #     interface_out: '{{ ansible_facts["default_ipv4"]["interface"] }}'
+    #     to_ip: "any"
+    #     comment: forwarding wg traffic
+    #     route: true
 
     - name: Install Docker
       ansible.builtin.include_role:
         name: geerlingguy.docker
 
-    - name: Install python lib for ansible via docker
-      ansible.builtin.include_role:
-        name: geerlingguy.pip
-      vars:
-        pip_install_packages:
-        - docker
+    # - name: Install python lib for ansible via docker
+    #   ansible.builtin.include_role:
+    #     name: geerlingguy.pip
+    #   vars:
+    #     pip_install_packages:
+    #     - docker
 
     # https://docs.pangolin.net/self-host/quick-install#prerequisites
     - name: Allowing tcp ports for Pangolin
@@ -169,7 +169,7 @@
 
 
 - name: Provisioning pretalx host
-  hosts: pretalx
+  hosts: pretalx, pretalx-dev
   handlers:
     - name: Importing handlers
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
@@ -255,12 +255,17 @@
         postgresql_locale: 'C.UTF-8'
         postgresql_ctype: 'C.UTF-8'
 
+    - name: Pause when restoring
+      ansible.builtin.pause:
+        prompt: "DB should be re-created, restore back and rsync files"
+      when: pretalx_recovery is defined
+
     # become pretalx user by doing:
     # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx <cmd>
     ## Setup after installation
     # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx check --deploy
     # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx migrate
-    # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx rebuild
+    # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx rebuild --npm-install
     # $ sudo -u pretalx /usr/share/webapps/pretalxmain/venv/bin/python -m pretalx init
     # Welcome to pretalx! This is my initialization command, please use it only once.
     # You can abort this command at any time using C-c, and it will save no data.
@@ -384,6 +389,7 @@
           endpoint = {{ r2_account_endpoint }}
           acl = private
           no_check_bucket = true
+          region = auto
 
     - name: Install pretalx backup script
       ansible.builtin.template:
@@ -412,8 +418,9 @@
           # Security hardening
           PrivateTmp=true
           ProtectSystem=strict
-          ProtectHome=true
+          # ProtectHome=true
           NoNewPrivileges=true
+          Environment="HOME={{ pretalx_backup_dir }}"
           ReadWritePaths={{ pretalx_backup_dir }} {{ pretalx_data_dir }}
 
     - name: Install systemd timer
@@ -446,7 +453,7 @@
 
     - name: Install PostgreSQL password file
       ansible.builtin.copy:
-        dest: /root/.pgpass
+        dest: '{{ pretalx_system_home }}/.pgpass'
         owner: pretalx
         group: pretalx
         mode: "0600"
