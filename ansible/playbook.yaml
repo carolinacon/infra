@@ -423,7 +423,6 @@
           ProtectSystem=strict
           # ProtectHome=true
           NoNewPrivileges=true
-          Environment="HOME={{ pretalx_backup_dir }}"
           ReadWritePaths={{ pretalx_backup_dir }} {{ pretalx_data_dir }}
 
     - name: Install systemd timer
