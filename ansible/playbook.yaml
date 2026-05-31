@@ -206,7 +206,7 @@
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
 
-    - name: Hardening servers
+    - name: Connecting to Pangolin
       ansible.builtin.import_tasks: ./tasks/newt_client.yaml
 
     - name: Install system dependencies
@@ -461,3 +461,19 @@
         mode: "0600"
         content: |
           {{ pretalx_pg_host }}:{{ pretalx_pg_port }}:{{ pretalx_database_name }}:{{ pretalx_database_user }}:{{ pretalx_database_password }}
+
+- name: Provisioning ctfd host
+  hosts: ctfd, ctfd-dev
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+
+  pre_tasks:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
