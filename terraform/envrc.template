@@ -1,4 +1,6 @@
 export VULTR_API_KEY= \
   AWS_ACCESS_KEY='' AWS_SECRET_KEY='' \
   CLOUDFLARE_API_TOKEN='' TF_VAR_cloudflare_account_id='' \
-  TF_VAR_matrix_ip='' TF_VAR_pangolin_subdomain=''
+  TF_VAR_matrix_ip='' TF_VAR_pangolin_subdomain='' \
+  PROXMOX_VE_ENDPOINT='' PROXMOX_VE_API_TOKEN='' PROXMOX_VE_SSH_USERNAME='' \
+  TF_VAR_tgt_node=''
