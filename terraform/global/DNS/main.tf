@@ -178,6 +178,30 @@ resource "cloudflare_dns_record" "pangolinv6" {
   proxied = false
 }
 
+resource "cloudflare_dns_record" "trivia" {
+  zone_id = data.cloudflare_zones.main_domain.result[0].id
+
+  name    = "trivia"
+  type    = "A"
+  content = data.terraform_remote_state.pangolin.outputs.lh_instance_ipv4
+  ttl     = local.ttl_default
+  comment = "${local.terraform_prefix} trivia website"
+
+  proxied = local.proxy_default
+}
+
+resource "cloudflare_dns_record" "triviav6" {
+  zone_id = data.cloudflare_zones.main_domain.result[0].id
+
+  name    = "trivia"
+  type    = "AAAA"
+  content = data.terraform_remote_state.pangolin.outputs.lh_instance_ipv6
+  ttl     = local.ttl_default
+  comment = "${local.terraform_prefix} trivia website"
+
+  proxied = local.proxy_default
+}
+
 # output "main_domain" {
 #   value = data.cloudflare_zones.main_domain.result[0].id
 # }

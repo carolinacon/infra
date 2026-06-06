@@ -474,19 +474,78 @@
   tasks:
     - name: Hardening servers
       ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
     - name: Install Docker
       ansible.builtin.include_role:
         name: geerlingguy.docker
 
-- name: Provisioning trivia host
-  hosts: trivia
-  handlers:
-    - name: Importing handlers
-      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+    # TASK [Connect to newt Pangolin site] *******************************************************************************************
+    # [ERROR]: Task failed: Module failed: Error creating container: 400 Client Error for http+docker://localhost/v1.54/containers/create?name=newt: Bad Request ("cannot share the host's network namespace when user namespaces are enabled")
+    # Origin: /home/user/src/cons/infra/ansible/tasks/newt_client.yaml:8:3
+    # 
+    # 6     - newt_endpoint | length > 0
+    # 7
+    # 8 - name: Connect to newt Pangolin site
+    #     ^ column 3
+    # 
+    # fatal: [trivia]: FAILED! => {"changed": false, "msg": "Error creating container: 400 Client Error for http+docker://localhost/v1.54/containers/create?name=newt: Bad Request (\"cannot share the host's network namespace when user namespaces are enabled\")"}
+    # 
+    # PLAY RECAP *********************************************************************************************************************
+    # trivia                     : ok=32   changed=0    unreachable=0    failed=1    skipped=27   rescued=0    ignored=0
+    # - name: Connecting to Pangolin
+    #   ansible.builtin.import_tasks: ./tasks/newt_client.yaml
 
-  pre_tasks:
-    - name: Importing handlers
-      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
-  tasks:
-    - name: TODO - deploy trivia steps
-      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+    - name: Configure Docker user namespace remapping
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {
+            "userns-remap": "default"
+          }
+      notify: Restart Docker
+
+    # - name: Verify required environment variables are present
+    #   ansible.builtin.assert:
+    #     that:
+    #       - lookup('env', item) | length > 0
+    #     fail_msg: "Required environment variable {{ item }} is not set"
+    #   loop:
+    #     - CTFD_SECRET_KEY
+    #     - DB_PASSWORD
+    #     - MAIL_SERVER
+    #     - MAIL_USERNAME
+    #     - MAIL_PASSWORD
+
+    - name: Create CTFd directory
+      ansible.builtin.file:
+        path: /opt/ctfd
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Install docker-compose.yml
+      ansible.builtin.template:
+        src: ctfd-docker-compose.yml.j2
+        dest: /opt/ctfd/docker-compose.yml
+        owner: root
+        group: root
+        mode: "0640"
+      notify: Restart CTFd
+
+    - name: Install .env file
+      ansible.builtin.template:
+        src: ctfd-dotenv.j2
+        dest: /opt/ctfd/.env
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart CTFd
+
+    - name: Deploy CTFd stack
+      community.docker.docker_compose_v2:
+        project_src: /opt/ctfd
+        state: present

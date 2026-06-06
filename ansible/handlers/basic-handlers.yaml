@@ -7,3 +7,13 @@
 - name: Reload ufw
   become: true
   ansible.builtin.command: ufw reload
+
+- name: Restart Docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+
+- name: Restart CTFd
+  community.docker.docker_compose_v2:
+    project_src: /opt/ctfd
+    state: restarted

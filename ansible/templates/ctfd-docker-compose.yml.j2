@@ -1,0 +1,125 @@
+services:
+  ctfd:
+    image: docker.io/ctfd/ctfd:3.8.5
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      SECRET_KEY: "${CTFD_SECRET_KEY}"
+      DATABASE_URL: "mysql+pymysql://ctfd:${DB_PASSWORD}@mariadb/ctfd"
+      REDIS_URL: "redis://redis:6379"
+      MAILFROM_ADDR: "${MAIL_USERNAME}"
+      MAIL_SERVER: "${MAIL_SERVER}"
+      MAIL_PORT: 587
+      MAIL_USEAUTH: true
+      MAIL_USERNAME: "${MAIL_USERNAME}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD}"
+      MAIL_TLS: true
+      UPLOAD_FOLDER: "/var/uploads"
+      WORKERS: 1
+      LOG_FOLDER: "/var/log/CTFd"
+      ACCESS_LOG: "-"
+      ERROR_LOG: "-"
+      REVERSE_PROXY: true
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ctfd_uploads:/var/uploads
+      - ctfd_logs:/var/log/CTFd
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - frontend
+      - backend
+
+  mariadb:
+    image: mariadb:10.11
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    environment:
+      MARIADB_DATABASE: ctfd
+      MARIADB_USER: ctfd
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_AUTO_UPGRADE: 1
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    command:
+      [
+        mysqld,
+        --character-set-server=utf8mb4,
+        --collation-server=utf8mb4_unicode_ci,
+        --wait_timeout=28800,
+        --log-warnings=0
+      ]
+
+    networks:
+      - backend
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - backend
+
+volumes:
+  ctfd_uploads:
+  ctfd_logs:
+  mariadb_data:
+  redis_data:
+
+networks:
+  frontend:
+  backend:
+    internal: true

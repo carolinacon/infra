@@ -1,0 +1,2 @@
+newt_id: "{{ lookup('ansible.builtin.env', 'TRIVIA_NEWT_ID') }}"
+newt_secret: "{{ lookup('ansible.builtin.env', 'TRIVIA_NEWT_SECRET') }}"
