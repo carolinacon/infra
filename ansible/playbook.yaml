@@ -463,7 +463,7 @@
           {{ pretalx_pg_host }}:{{ pretalx_pg_port }}:{{ pretalx_database_name }}:{{ pretalx_database_user }}:{{ pretalx_database_password }}
 
 - name: Provisioning ctfd host
-  hosts: ctfd, ctfd-dev
+  hosts: ctfd, ctfd-dev, trivia
   handlers:
     - name: Importing handlers
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
@@ -477,3 +477,16 @@
     - name: Install Docker
       ansible.builtin.include_role:
         name: geerlingguy.docker
+
+- name: Provisioning trivia host
+  hosts: trivia
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+
+  pre_tasks:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+  tasks:
+    - name: TODO - deploy trivia steps
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
