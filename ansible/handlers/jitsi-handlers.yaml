@@ -1,0 +1,6 @@
+- name: Restart jitsi
+  ansible.builtin.systemd:
+    enabled: true
+    state: restarted
+    name: '{{ systemd_service_name }}'
+  become: true

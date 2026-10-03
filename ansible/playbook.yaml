@@ -549,3 +549,121 @@
       community.docker.docker_compose_v2:
         project_src: /opt/ctfd
         state: present
+
+- name: Provisioning jitsi host
+  hosts: jitsi, jitsi-dev
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+    - name: Importing jitsi handlers
+      ansible.builtin.import_tasks: ./handlers/jitsi-handlers.yaml
+
+  vars:
+    # to set variable for handler
+    systemd_service_name: "docker_jitsi-{{ jitsi_hostname | regex_replace('\\.', '_') }}.service"
+  pre_tasks:
+    - name: Pretasks
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+
+    - name: Allowing tcp ports for Jitsi
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        comment: tcp jitsi ports
+      loop:
+        - 80
+        - 443
+
+    - name: Allowing udp port for Jitsi
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: udp
+        comment: udp jitsi port
+      loop:
+        ## JVB: https://jitsi.github.io/handbook/docs/devops-guide/turn
+        - 10000
+
+    - name: Provisioning Jitsi
+      ansible.builtin.import_tasks: ./tasks/jitsi-tasks.yaml
+      vars:
+        login_user: '{{ lookup("env", "JITSI_ADMIN") }}'
+        login_pass: '{{ lookup("env", "JITSI_PASS") }}'
+        letsencrypt_email: '{{ lookup("env", "PANGOLIN_EMAIL") }}'
+        jitsi_service_user: 'jitsi'
+        jitsi_clone_folder_name: 'jitsi_docker'
+        jitsi_clone_folder: '/home/{{ jitsi_service_user }}/{{ jitsi_clone_folder_name }}'
+        gen_pass_vars:
+          - 'JICOFO_AUTH_PASSWORD'
+          - 'JVB_AUTH_PASSWORD'
+          - 'JIGASI_XMPP_PASSWORD'
+          - 'JIGASI_TRANSCRIBER_PASSWORD'
+          - 'JIBRI_RECORDER_PASSWORD'
+          - 'JIBRI_XMPP_PASSWORD'
+        jitsi_folders:
+          # https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-docker/#updating-from-a-release-older-than-stable-11146
+          - 'storage/web/letsencrypt'
+          - 'storage/transcripts'
+          - 'storage/prosody/data'
+          - 'storage/prosody/prosody-plugins-custom'
+          - 'jicofo'
+          - 'jvb'
+          - 'jigasi'
+          - 'storage/jibri'
+          - 'tmp/web-crontabs'
+          - 'tmp/web-load-test'
+        config_mods:
+          - { 'key': 'CONFIG', 'update_value': './config_dirs' }
+          - { 'key': 'HTTP_PORT', 'update_value': '80' }
+          - { 'key': 'HTTPS_PORT', 'update_value': '443' }
+          - { 'key': 'PUBLIC_URL', 'update_value': 'https://{{ jitsi_hostname }}' }
+          - { 'key': 'LETSENCRYPT_DOMAIN', 'update_value': '{{ jitsi_hostname }}' }
+          - { 'key': 'LETSENCRYPT_EMAIL', 'update_value': '{{ letsencrypt_email }}' }
+
+    # - name: Install LetsEncrypt
+    #   ansible.builtin.include_role:
+    #     name: systemli.letsencrypt
+    #   vars:
+    #     letsencrypt_account_email: '{{ lookup("env", "PANGOLIN_EMAIL") }}'
+    #     letsencrypt_dns_challenge: false
+    #     letsencrypt_cert:
+    #       name: "{{ jitsi_meet_server_name }}"
+    #       chanllenge: http
+    #       http_auth: standalone
+    #       reuse_key: true
+    #       # post_hook: "/usr/local/bin/cert-post-hook.sh"
+    #       domains:
+    #         - "{{ jitsi_meet_server_name }}"
+
+    # - name: Install Jitsi
+    #   ansible.builtin.include_role:
+    #     name: systemli.jitsi_meet
+    #   vars:
+    #     jitsi_meet_nginx_access_log: true
+    #     jitsi_meet_ssl_cert_path: '/etc/letsencrypt/live/jitsi-dev.carolinacon.org/fullchain.pem'
+    #     jitsi_meet_ssl_key_path: '/etc/letsencrypt/live/jitsi-dev.carolinacon.org/privkey.pem'
+    #     # use openssl command: https://github.com/jitsi/docker-jitsi-meet/blob/ce25bf67d2cf0f0235d2e25c7de65eabfca58d5f/gen-passwords.sh#L3
+    #     jitsi_meet_base_secret: '81edfaac203f7d0a589e10eb5ce0d631'
+    #     jitsi_meet_turn_secret: 'cfe486c0af0286818629771656c0a16b'
+
+    ## only needed if we couldn't use YT for streaming
+    # - name: Enable Jitsi Meet live streaming
+    #   ansible.builtin.replace:
+    #     path: "/etc/jitsi/meet/{{ jitsi_meet_server_name }}-config.js"
+    #     regexp: '(?ms)^    // liveStreaming: \{\n.*?^    // \},'
+    #     replace: |
+    #           liveStreaming: {
+    #               enabled: true,
+    #               termsLink: 'https://www.youtube.com/t/terms',
+    #               dataPrivacyLink: 'https://policies.google.com/privacy',
+    #               validatorRegExpString: '^(?:[a-zA-Z0-9]{4}(?:-(?!$)|$)){4}',
+    #               helpLink: 'https://jitsi.org/live'
+    #           },

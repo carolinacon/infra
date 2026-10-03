@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
     "ansible-core>=2.18.3",
+    # for using: ansible.builtin.git
+    "github3-py>=4.0.1",
 ]
 
 [tool.uv]

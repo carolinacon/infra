@@ -26,3 +26,15 @@ roles:
     version: patch-1
     scm: git
     src: https://github.com/elreydetoda/ansible-pretalx.git
+  - name: systemli.jitsi_meet
+    version: 3.4.2
+    scm: git
+    src: https://github.com/systemli/ansible-role-jitsi-meet.git
+  - name: systemli.letsencrypt
+    version: 2.6.0
+    scm: git
+    src: https://github.com/systemli/ansible-role-letsencrypt.git
+  - name: systemli.apt_repositories
+    version: 2.11.0
+    scm: git
+    src: https://github.com/systemli/ansible-role-apt_repositories.git

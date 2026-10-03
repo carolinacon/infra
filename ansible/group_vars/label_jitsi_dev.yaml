@@ -1,0 +1,13 @@
+jitsi_hostname: 'jitsi-dev.carolinacon.org'
+jitsi_config_enable:
+  - ENABLE_LOBBY
+  - ENABLE_WELCOME_PAGE
+  - ENABLE_NOISY_MIC_DETECTION
+  - ENABLE_LETSENCRYPT
+  - ENABLE_AUTH
+  - ENABLE_GUESTS
+  - AUTH_TYPE
+  - ENABLE_HTTP_REDIRECT
+  # - ENABLE_HSTS
+  # for dev servers
+  - LETSENCRYPT_USE_STAGING

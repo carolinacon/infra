@@ -1,0 +1,13 @@
+# - name: updating rhel system
+#   ansible.builtin.dnf:
+#     name: "*"
+#     state: "latest"
+#   register: updated_system
+- name: Updating debian system
+  ansible.builtin.apt:
+    upgrade: full
+  register: updated_system
+
+- name: Rebooting to new system
+  ansible.builtin.reboot:
+  when: updated_system.changed # noqa: no-handler

@@ -1,0 +1,215 @@
+# re-using already made jitsi docker setup:
+# https://gitlab.com/elreydetoda-infra/iac/misc/-/blob/ec018aba644df2ae01e275f8dcb92b843148e193/apps/jitsi/prov-ansible/jitsi-playbook.yml
+
+- name: Preping for docker-compose/podman
+  block:
+
+    - name: Updating system
+      ansible.builtin.include_tasks: update-tasks.yaml
+
+    - name: Add users to the docker secondary group
+      ansible.builtin.user:
+        name: '{{ jitsi_service_user }}'
+        append: true
+        groups: docker
+        password: '!'
+      become: true
+
+    - name: Installing deps
+      ansible.builtin.package:
+        state: present
+        name:
+          - 'git'
+          # for jitsi recordings ( snd-aloop )
+          - 'linux-headers-generic'
+
+    - name: Allowing to run docker-compose as privileged
+      ansible.builtin.copy:
+        owner: root
+        group: root
+        mode: '600'
+        dest: '/etc/sudoers.d/jitsi'
+        validate: /usr/sbin/visudo -csf %s
+        content: |
+          {{ jitsi_service_user }} ALL=(ALL) NOPASSWD: /usr/bin/docker
+
+- name: Configuring docker jitsi
+  vars:
+    jitsi_gh_un: jitsi
+    jitsi_gh_repo: docker-jitsi-meet
+    # jitsi_version_override: stable-11031
+  block:
+
+    # current version: stable-11146-2
+    - name: Get latest release of a public repository
+      community.general.github_release:
+        user: '{{ jitsi_gh_un }}'
+        repo: '{{ jitsi_gh_repo }}'
+        action: latest_release
+      register: jitsi_version
+      delegate_to: localhost
+
+    - name: Cloning repo
+      ansible.builtin.git:
+        name: 'https://github.com/{{ jitsi_gh_un }}/{{ jitsi_gh_repo }}.git'
+        dest: '{{ jitsi_clone_folder }}'
+        version: '{{ jitsi_version.tag | default(jitsi_version_override) }}'
+        update: false
+      register: just_cloned
+
+    - name: Change ownership  # noqa: no-handler
+      ansible.builtin.file:
+        path: '{{ jitsi_clone_folder }}'
+        recurse: true
+        owner: '{{ jitsi_service_user }}'
+        group: '{{ jitsi_service_user }}'
+        state: directory
+      when: just_cloned.changed
+
+    - name: Copying env.example to .env
+      ansible.builtin.copy:
+        owner: '{{ jitsi_service_user }}'
+        group: '{{ jitsi_service_user }}'
+        mode: '600'
+        force: false
+        dest: '{{ jitsi_clone_folder }}/.env'
+        src: '{{ jitsi_clone_folder }}/env.example'
+        remote_src: true
+      register: copied_env_file
+
+    # replaces: https://github.com/jitsi/docker-jitsi-meet/blob/ce25bf67d2cf0f0235d2e25c7de65eabfca58d5f/gen-passwords.sh#L3
+    - name: Generating passwords for container  # noqa: no-handler
+      ansible.builtin.lineinfile:
+        path: '{{ jitsi_clone_folder }}/.env'
+        regexp: '^{{ item }}='
+        line: "{{ item }}={{ lookup('password', '/tmp/passwordfile' + item + ' chars=ascii_letters,digits length=25') }}"
+      loop: '{{ gen_pass_vars }}'
+      when: copied_env_file.changed
+
+    - name: Modify env vars
+      ansible.builtin.lineinfile:
+        path: '{{ jitsi_clone_folder }}/.env'
+        regexp: '^(#|)(\s+|){{ item.key }}='
+        line: '{{ item.key }}={{ item.update_value }}'
+      loop: '{{ config_mods }}'
+      loop_control:
+        label: "{{ item.key }}"
+      register: mod_env_vars
+      notify:
+        - Restart jitsi
+
+    # uncommenting lines already existing in env.example file:
+    # https://github.com/jitsi/docker-jitsi-meet/blob/f57271b946aa0fa05e48d835bcf7ace77a8bdfaa/env.example
+    - name: Enabling env vars
+      ansible.builtin.lineinfile:
+        path: '{{ jitsi_clone_folder }}/.env'
+        backrefs: true
+        regexp: '^#(\s+|)(?P<captured_line>{{ item }}=.*)'
+        line: '\g<captured_line>'
+      loop: '{{ jitsi_config_enable }}'
+      register: enable_env_vars
+      notify:
+        - Restart jitsi
+
+    # adding, because without this it wasn't able to
+    #   find the containers
+    # - name: Specifying registry
+    #   ansible.builtin.replace:
+    #     path: '{{ jitsi_clone_folder }}/{{ item }}'
+    #     regexp: '(?P<before_image>^\s+image:(\s+|))(?P<image_name>(jitsi|etherpad).*)'
+    #     replace: '\g<before_image>docker.io/\g<image_name>'
+    #     backup: true
+    #     validate: 'grep "docker.io" %s'
+    #   loop:
+    #     - 'docker-compose.yml'
+    #     - 'etherpad.yml'
+    #   notify:
+    #     - Restart jitsi
+
+    - name: Create necessary folders  # noqa: no-handler
+      ansible.builtin.file:
+        path: '{{ jitsi_clone_folder }}/config_dirs/{{ item }}'
+        owner: '{{ jitsi_service_user }}'
+        group: '{{ jitsi_service_user }}'
+        mode: '777'
+        state: directory
+      loop: '{{ jitsi_folders }}'
+      when: just_cloned.changed
+
+    - name: Copy mgmt script
+      ansible.builtin.copy:
+        owner: root
+        group: root
+        mode: '755'
+        dest: '/usr/local/bin/container_startup.sh'
+        content: |
+          #!/usr/bin/env bash
+
+          # https://elrey.casa/bash/scripting/harden
+          set -${-//[sc]/}eu${DEBUG+xv}o pipefail
+
+          function main(){
+            cmd=(
+              '/usr/bin/sudo'
+              '/usr/bin/docker'
+              'compose'
+            )
+            extra_args=()
+            case "${1}" in
+              up)
+                extra_args=( '-f' 'docker-compose.yml' )
+              ;;
+            esac
+            cmd+=( "${extra_args[@]}" )
+            "${cmd[@]}" "${1}" || "${cmd[@]}" "${1}" -f
+          }
+
+          # https://elrey.casa/bash/scripting/main
+          if [[ "${0}" = "${BASH_SOURCE[0]:-bash}" ]] ; then
+            main "${@}"
+          fi
+
+
+    - name: Copy systemd template over
+      ansible.builtin.template:
+        src: ./templates/jitsi.service.j2
+        dest: '/etc/systemd/system/{{ systemd_service_name }}'
+        mode: '644'
+        owner: root
+        group: root
+      vars:
+        working_dir: '{{ jitsi_clone_folder }}'
+      register: systemd_file_var
+
+    - name: Reloading systemd with new service file  # noqa: no-handler
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: systemd_file_var.changed
+
+    - name: Reloading and starting service
+      ansible.builtin.systemd:
+        enabled: true
+        state: started
+        name: '{{ systemd_service_name }}'
+      when: mod_env_vars.changed or enable_env_vars.changed
+
+    - name: Wait for port 443 to become open on the host, don't start checking for 10 seconds
+      ansible.builtin.wait_for:
+        port: 443
+        delay: 10
+
+    - name: Pausing for 15 seconds to allow containers to start up
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Setting up moderator login creds  # noqa: no-handler no-changed-when
+      ansible.builtin.command:
+        # prosody config from here:
+        # https://github.com/jitsi/docker-jitsi-meet/blob/f57271b946aa0fa05e48d835bcf7ace77a8bdfaa/prosody/rootfs/etc/s6-overlay/scripts/prosody#L3
+        cmd: |
+          docker compose exec prosody /bin/bash -c "prosodyctl --config /run/prosody/config/prosody.cfg.lua  register {{ login_user }} meet.jitsi '{{ login_pass }}'"
+        chdir: '{{ jitsi_clone_folder }}'
+      when: copied_env_file.changed
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers

@@ -1,0 +1,16 @@
+[Unit]
+Description=this is a hack for starting the jitsi docker+podman containers
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ working_dir }}
+ExecStart=/usr/local/bin/container_startup.sh up
+ExecStop=/usr/local/bin/container_startup.sh down
+ExecReload=/usr/local/bin/container_startup.sh restart
+User={{ jitsi_service_user }}
+Group={{ jitsi_service_user }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
