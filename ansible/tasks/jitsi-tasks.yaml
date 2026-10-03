@@ -210,6 +210,3 @@
           docker compose exec prosody /bin/bash -c "prosodyctl --config /run/prosody/config/prosody.cfg.lua  register {{ login_user }} meet.jitsi '{{ login_pass }}'"
         chdir: '{{ jitsi_clone_folder }}'
       when: copied_env_file.changed
-
-    - name: Flush handlers
-      ansible.builtin.meta: flush_handlers
