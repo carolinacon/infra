@@ -40,7 +40,7 @@
     # jitsi_version_override: stable-11031
   block:
 
-    # current version: stable-11146-2
+    # current version: stable-11248
     - name: Get latest release of a public repository
       community.general.github_release:
         user: '{{ jitsi_gh_un }}'

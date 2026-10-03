@@ -610,14 +610,10 @@
           - 'JIBRI_XMPP_PASSWORD'
         jitsi_folders:
           # https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-docker/#updating-from-a-release-older-than-stable-11146
-          - 'storage/web/letsencrypt'
-          - 'storage/transcripts'
-          - 'storage/prosody/data'
-          - 'storage/prosody/prosody-plugins-custom'
-          - 'jicofo'
-          - 'jvb'
-          - 'jigasi'
           - 'storage/jibri'
+          - 'storage/prosody'
+          - 'storage/transcripts'
+          - 'storage/web'
           - 'tmp/web-crontabs'
           - 'tmp/web-load-test'
         config_mods:
@@ -627,3 +623,7 @@
           - { 'key': 'PUBLIC_URL', 'update_value': 'https://{{ jitsi_hostname }}' }
           - { 'key': 'LETSENCRYPT_DOMAIN', 'update_value': '{{ jitsi_hostname }}' }
           - { 'key': 'LETSENCRYPT_EMAIL', 'update_value': '{{ letsencrypt_email }}' }
+          - { 'key': 'ENABLE_AV_MODERATION', 'update_value': '1' }
+          - { 'key': 'START_WITH_AUDIO_MUTED', 'update_value': '1' }
+          - { 'key': 'START_WITH_VIDEO_MUTED', 'update_value': '1' }
+          - { 'key': 'ENABLE_BREAKOUT_ROOMS', 'update_value': '1' }
