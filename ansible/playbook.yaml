@@ -627,3 +627,44 @@
           - { 'key': 'START_WITH_AUDIO_MUTED', 'update_value': '1' }
           - { 'key': 'START_WITH_VIDEO_MUTED', 'update_value': '1' }
           - { 'key': 'ENABLE_BREAKOUT_ROOMS', 'update_value': '1' }
+
+- name: Provisioning owncast host
+  hosts: owncast-dev
+  handlers:
+    - name: Importing handlers
+      ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
+
+  pre_tasks:
+    - name: Pretasks
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+  vars:
+    owncast_dir: /opt/owncast
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
+    - name: Install Docker
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+
+    - name: Create owncast directory
+      ansible.builtin.file:
+        path: '{{ owncast_dir }}'
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Install docker-compose.yml
+      ansible.builtin.template:
+        src: owncast-docker-compose.yml.j2
+        dest: '{{ owncast_dir }}/docker-compose.yml'
+        owner: root
+        group: root
+        mode: "0640"
+      notify: Restart owncast
+
+    - name: Deploy owncast stack
+      community.docker.docker_compose_v2:
+        project_src: '{{ owncast_dir }}'
+        state: present

@@ -17,3 +17,8 @@
   community.docker.docker_compose_v2:
     project_src: /opt/ctfd
     state: restarted
+
+- name: Restart owncast
+  community.docker.docker_compose_v2:
+    project_src: /opt/owncast
+    state: restarted

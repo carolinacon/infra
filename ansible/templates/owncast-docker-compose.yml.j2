@@ -1,0 +1,9 @@
+services:
+  owncast:
+    image: docker.io/owncast/owncast:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "1935:1935"
+    volumes:
+      - {{ owncast_dir }}/data:/app/data
