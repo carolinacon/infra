@@ -5,7 +5,7 @@
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
 
   pre_tasks:
-    - name: Importing handlers
+    - name: Importing pre-tasks
       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
 
   vars:
@@ -175,7 +175,7 @@
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
 
   pre_tasks:
-    - name: Importing handlers
+    - name: Importing pre-tasks
       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
 
   vars:
@@ -469,7 +469,7 @@
       ansible.builtin.import_tasks: ./handlers/basic-handlers.yaml
 
   pre_tasks:
-    - name: Importing handlers
+    - name: Importing pre-tasks
       ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
   tasks:
     - name: Hardening servers
