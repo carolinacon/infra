@@ -627,6 +627,7 @@
           - { 'key': 'START_WITH_AUDIO_MUTED', 'update_value': '1' }
           - { 'key': 'START_WITH_VIDEO_MUTED', 'update_value': '1' }
           - { 'key': 'ENABLE_BREAKOUT_ROOMS', 'update_value': '1' }
+          - { 'key': 'LETSENCRYPT_ACME_SERVER', 'update_value': 'letsencrypt' }
 
 - name: Provisioning owncast host
   hosts: owncast-dev
