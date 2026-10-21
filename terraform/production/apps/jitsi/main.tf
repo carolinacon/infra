@@ -22,7 +22,8 @@ resource "vultr_instance" "jitsi" {
   enable_ipv6 = true
   backups = "enabled"
   backups_schedule {
-    type = "weekly"
+    type = "daily"
+    hour = 05
   }
   ssh_key_ids = [
     data.vultr_ssh_key.shared_ssh.id
