@@ -186,6 +186,11 @@
         daemon_reload: true
       when: systemd_file_var.changed
 
+    - name: Pausing for user to copy over certificates (hit enter when done)
+      ansible.builtin.pause:
+        prompt: "Perform a backup restoration for certificates"
+      when: JITSI_RESTORE_CERTS is defined
+
     - name: Reloading and starting service
       ansible.builtin.systemd:
         enabled: true

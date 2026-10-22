@@ -628,6 +628,7 @@
           - { 'key': 'START_WITH_VIDEO_MUTED', 'update_value': '1' }
           - { 'key': 'ENABLE_BREAKOUT_ROOMS', 'update_value': '1' }
           - { 'key': 'LETSENCRYPT_ACME_SERVER', 'update_value': 'letsencrypt' }
+          - { 'key': 'JICOFO_AUTH_LIFETIME', 'update_value': '22' }
 
 - name: Provisioning owncast host
   hosts: owncast-dev
