@@ -79,14 +79,14 @@ data "terraform_remote_state" "jitsi_dev" {
   }
 }
 
-# data "terraform_remote_state" "jitsi" {
-#   backend = "s3"
-#   config = {
-#     bucket       = "ccon-tfstate"
-#     key          = "production/apps/jitsi/terraform.tfstate"
-#     region       = "us-west-2"
-#   }
-# }
+data "terraform_remote_state" "jitsi" {
+  backend = "s3"
+  config = {
+    bucket       = "ccon-tfstate"
+    key          = "production/apps/jitsi/terraform.tfstate"
+    region       = "us-west-2"
+  }
+}
 
 ###############################################################################
 # Provider: Resources created
@@ -268,29 +268,29 @@ resource "cloudflare_dns_record" "jitsi_dev_v6" {
   proxied = false
 }
 
-# resource "cloudflare_dns_record" "jitsi" {
-#   zone_id = data.cloudflare_zones.main_domain.result[0].id
+resource "cloudflare_dns_record" "jitsi" {
+  zone_id = data.cloudflare_zones.main_domain.result[0].id
 
-#   name    = "jitsi"
-#   type    = "A"
-#   content = data.terraform_remote_state.jitsi.outputs.jitsi_instance_ipv4
-#   ttl     = local.ttl_default
-#   comment = "${local.terraform_prefix} jitsi website"
+  name    = "jitsi"
+  type    = "A"
+  content = data.terraform_remote_state.jitsi.outputs.jitsi_instance_ipv4
+  ttl     = local.ttl_default
+  comment = "${local.terraform_prefix} jitsi website"
 
-#   proxied = false
-# }
+  proxied = false
+}
 
-# resource "cloudflare_dns_record" "jitsi_v6" {
-#   zone_id = data.cloudflare_zones.main_domain.result[0].id
+resource "cloudflare_dns_record" "jitsi_v6" {
+  zone_id = data.cloudflare_zones.main_domain.result[0].id
 
-#   name    = "jitsi"
-#   type    = "AAAA"
-#   content = data.terraform_remote_state.jitsi.outputs.jitsi_instance_ipv6
-#   ttl     = local.ttl_default
-#   comment = "${local.terraform_prefix} jitsi website"
+  name    = "jitsi"
+  type    = "AAAA"
+  content = data.terraform_remote_state.jitsi.outputs.jitsi_instance_ipv6
+  ttl     = local.ttl_default
+  comment = "${local.terraform_prefix} jitsi website"
 
-#   proxied = false
-# }
+  proxied = false
+}
 
 # output "main_domain" {
 #   value = data.cloudflare_zones.main_domain.result[0].id
