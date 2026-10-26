@@ -1,0 +1,195 @@
+---
+# Keep this list aligned with the manually tested Ubuntu 24.04/Vultr setup.
+# `chromium-browser` and `firefox` may install Ubuntu's Snap-packaged builds.
+- name: Upgrade installed Ubuntu packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+    cache_valid_time: 3600
+    lock_timeout: 600
+
+- name: Install streaming desktop, XRDP, audio, and diagnostic packages
+  ansible.builtin.apt:
+    name:
+      - kubuntu-desktop
+      - xrdp
+      - xorgxrdp
+      - chromium-browser
+      - firefox
+      - nvtop
+      - konsole
+      - plasma-discover
+      - plasma-discover-backend-snap
+      - plasma-discover-backend-flatpak
+      - flatpak
+      - qpwgraph
+      - libfuse2t64
+      - pavucontrol
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    lock_timeout: 600
+
+- name: Download the official Google Chrome Debian package
+  ansible.builtin.get_url:
+    url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    dest: /var/cache/apt/archives/google-chrome-stable_current_amd64.deb
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+- name: Install Google Chrome from the downloaded Debian package
+  ansible.builtin.apt:
+    deb: /var/cache/apt/archives/google-chrome-stable_current_amd64.deb
+    state: present
+    lock_timeout: 600
+
+# Back up the packaged XRDP startup script once, before inserting the KDE fix.
+- name: Preserve the original XRDP startwm.sh
+  ansible.builtin.copy:
+    src: /etc/xrdp/startwm.sh
+    dest: /etc/xrdp/startwm.sh.orig
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Add KDE Plasma environment workaround to XRDP startup
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/startwm.sh
+    backup: true
+    insertbefore: '^test -x /etc/X11/Xsession'
+    marker: '# {mark} ANSIBLE MANAGED KDE PLASMA XRDP WORKAROUND'
+    block: |
+      # Work around KDE Plasma / XRDP missing display environment
+      if [ -n "${DISPLAY:-}" ] && command -v systemctl >/dev/null 2>&1; then
+          systemctl --user set-environment \
+              DISPLAY="$DISPLAY" \
+              XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" \
+              2>/dev/null || true
+
+          systemctl --user reset-failed plasma-kglobalaccel.service \
+              2>/dev/null || true
+
+          systemctl --user start plasma-kglobalaccel.service \
+              2>/dev/null || true
+      fi
+  notify:
+    - Restart XRDP
+    - Restart XRDP session manager
+
+- name: Ensure the XRDP service account can read the TLS certificate key
+  ansible.builtin.user:
+    name: xrdp
+    groups: ssl-cert
+    append: true
+  notify:
+    - Restart XRDP
+    - Restart XRDP session manager
+
+- name: Enable and start XRDP
+  ansible.builtin.service:
+    name: xrdp
+    state: started
+    enabled: true
+
+- name: Enable and start XRDP session manager
+  ansible.builtin.service:
+    name: xrdp-sesman
+    state: started
+    enabled: true
+
+# This defaults to the same open-to-all rule as `ufw allow 3389` in the manual
+# setup. Prefer overriding streaming_rdp_allowed_from with a trusted /32 or VPN
+# CIDR, e.g. -e streaming_rdp_allowed_from=203.0.113.10/32.
+- name: Allow XRDP from any source (manual-setup compatibility default)
+  community.general.ufw:
+    rule: allow
+    port: "3389"
+    proto: tcp
+    comment: XRDP remote desktop
+    state: enabled
+  when: (streaming_rdp_allowed_from | default('any')) == 'any'
+
+- name: Restrict XRDP to a configured source network
+  community.general.ufw:
+    rule: allow
+    port: "3389"
+    proto: tcp
+    from_ip: "{{ streaming_rdp_allowed_from }}"
+    comment: XRDP remote desktop (restricted source)
+    state: enabled
+  when: (streaming_rdp_allowed_from | default('any')) != 'any'
+
+- name: Add the system-wide Flathub remote
+  community.general.flatpak_remote:
+    name: flathub
+    state: present
+    flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+    method: system
+
+- name: Install OBS Studio and required Flatpak plugins system-wide
+  community.general.flatpak:
+    name: "{{ item }}"
+    state: present
+    remote: flathub
+    method: system
+  loop:
+    - com.obsproject.Studio
+    - com.obsproject.Studio.Plugin.SourceRecord
+    - com.obsproject.Studio.Plugin.PipeWireAudioCapture
+
+# The password is intentionally supplied as a hash from Ansible Vault or
+# inventory variables. Existing accounts are not reset if the hash is omitted.
+- name: Look up the streamer account
+  ansible.builtin.getent:
+    database: passwd
+    key: streamer
+    fail_key: false
+
+- name: Require a password hash before creating a new streamer account
+  ansible.builtin.assert:
+    that:
+      - streamer_password_hash is defined
+      - streamer_password_hash | string | length > 0
+    fail_msg: >-
+      Define streamer_password_hash as a SHA-512 password hash in an Ansible Vault
+      variables file before creating the streamer account. The user needs a password
+      for sudo/GUI authentication prompts.
+  when: "'streamer' not in ansible_facts.getent_passwd"
+
+- name: Create the streamer account and grant sudo access
+  ansible.builtin.user:
+    name: streamer
+    comment: ""
+    create_home: true
+    shell: /bin/bash
+    groups:
+      - sudo
+    append: true
+    password: "{{ streamer_password_hash | default(omit, true) }}"
+    update_password: on_create
+
+- name: Download the uv installer
+  ansible.builtin.get_url:
+    url: https://astral.sh/uv/install.sh
+    dest: /var/cache/uv-install.sh
+    owner: root
+    group: root
+    mode: "0755"
+    force: false
+
+- name: Install uv and uvx into /usr/local/bin when not already installed
+  ansible.builtin.command:
+    cmd: /bin/sh /var/cache/uv-install.sh
+    creates: /usr/local/bin/uv
+  environment:
+    UV_NO_MODIFY_PATH: "1"
+    UV_INSTALL_DIR: /usr/local/bin
+
+# The original `uvx glances` command launches an interactive TUI, so do not run
+# it during provisioning (that would stall Ansible). Run it from Konsole later.

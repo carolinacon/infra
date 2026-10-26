@@ -670,3 +670,32 @@
       community.docker.docker_compose_v2:
         project_src: '{{ owncast_dir }}'
         state: present
+
+# TODO: review and validate deployment actually works
+#       manual commands used to generate this are under: ansible/ai-generated-docs/README-streaming-pc.md
+- name: Provisioning livestream host
+  hosts: livestream
+  vars:
+    # Copy to an untracked, Ansible Vault-encrypted file before creating a fresh account.
+    # Generate the hash on the controller (e.g. `mkpasswd --method=sha-512`).
+    streamer_password_hash: '$6$replace-this-with-a-real-sha-512-hash'
+
+    # Recommended: replace with your trusted public IP / VPN CIDR.
+    # If omitted, the tasks preserve the manual setup and allow TCP/3389 from anywhere.
+    streaming_rdp_allowed_from: '203.0.113.10/32'
+  become: true
+
+  handlers:
+    - name: Importing streaming PC handlers
+      ansible.builtin.import_tasks: ./handlers/streaming-pc-handlers.yaml
+
+  pre_tasks:
+    - name: Importing pre-tasks
+      ansible.builtin.import_tasks: ./tasks/pre-tasks.yaml
+
+  tasks:
+    - name: Hardening servers
+      ansible.builtin.import_tasks: ./tasks/hardening.yaml
+
+    - name: Provisioning streaming PC
+      ansible.builtin.import_tasks: ./tasks/streaming-pc.yaml
